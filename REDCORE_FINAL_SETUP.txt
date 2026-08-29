@@ -1,0 +1,5 @@
+REDCORE FINAL
+실행: REDCORE_START.bat 더블클릭
+관리자: http://localhost:3000/admin.html
+기본 로컬 관리자 키: local-admin-change-me
+실제 카드/간편결제는 PG 계약 및 인증키가 필요합니다.
