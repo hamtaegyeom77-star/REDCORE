@@ -471,8 +471,6 @@ function selectProductImage(index) {
 
   thumbs.forEach((x, i) => {
     x.classList.toggle(
-       thumbs.forEach((x, i) => {
-    x.classList.toggle(
       "active",
       i === index
     );
