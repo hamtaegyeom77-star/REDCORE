@@ -815,7 +815,7 @@ function bindForms() {
         customer.phone.replace(/\s/g, "");
 
       if (
-        !/^01[0-9]-?\d{3,4}-?\d{4}$/.test(콜)
+        !/^01[0-9]-?\d{3,4}-?\d{4}$/.test(phone)
       ) {
         return toast(
           "휴대폰 번호를 확인해주세요."
