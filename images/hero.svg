@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900">
+<rect width="1200" height="900" fill="#e9e4e1"/>
+<ellipse cx="650" cy="470" rx="420" ry="330" fill="#202323" transform="rotate(-8 650 470)"/>
+<path d="M945 190c80 72 118 182 116 285-2 98-38 193-107 269l-31-25c61-72 93-159 94-249 1-94-34-191-101-257z" fill="#c94b47"/>
+<g transform="translate(655 225) rotate(90)">
+<text x="0" y="0" font-family="Arial,sans-serif" font-weight="800" font-size="82" fill="#f4f1ef" letter-spacing="-4">REDCORE</text>
+</g>
+<text x="650" y="760" text-anchor="middle" font-family="Arial,sans-serif" font-size="16" fill="#f4f1ef" opacity=".72" letter-spacing="4">2026 SPRING / 01</text>
+</svg>

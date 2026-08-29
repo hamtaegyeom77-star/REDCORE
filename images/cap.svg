@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 900">
+<rect width="800" height="900" fill="#eee9e6"/>
+<rect x="90" y="80" width="620" height="740" rx="8" fill="#d7d1cc"/>
+<text x="400" y="430" text-anchor="middle" font-family="Arial,sans-serif" font-size="38" font-weight="800" fill="#202323" letter-spacing="3">REDCORE</text>
+<text x="400" y="475" text-anchor="middle" font-family="Arial,sans-serif" font-size="14" fill="#202323" opacity=".65" letter-spacing="4">REDCORE CAP</text>
+<circle cx="650" cy="140" r="42" fill="#c94b47"/>
+</svg>
