@@ -3,4 +3,18 @@ const API_BASE=location.protocol==='file:'?'http://localhost:3000':''; let key=l
 async function load(){key=keyEl.value.trim();localStorage.setItem('redcore_admin_key',key);const r=await fetch(API_BASE+'/api/admin/orders',{headers:{'x-redcore-admin-key':key}});const d=await r.json();const el=document.querySelector('#admin-orders');if(!r.ok){el.innerHTML='<div class="empty">관리자 키가 올바르지 않습니다.</div>';return;}if(!d.orders.length){el.innerHTML='<div class="empty">주문이 없습니다.</div>';return;}el.innerHTML=d.orders.slice().reverse().map(o=>`<div class="notice-row" style="display:block;padding:18px 0;border-bottom:1px solid #ddd"><b>${o.id}</b><br><span>${escapeHtml(o.customer.name)} · ${escapeHtml(o.customer.phone)}</span><br><span>${escapeHtml(o.customer.address)}</span><br><strong>${Number(o.total||0).toLocaleString('ko-KR')}원</strong><br><small>${new Date(o.createdAt).toLocaleString('ko-KR')}</small><br><select data-id="${o.id}" onchange="status(this)"><option ${o.status==='PAYMENT_PENDING'?'selected':''}>PAYMENT_PENDING</option><option ${o.status==='PAID'?'selected':''}>PAID</option><option ${o.status==='PREPARING'?'selected':''}>PREPARING</option><option ${o.status==='SHIPPED'?'selected':''}>SHIPPED</option><option ${o.status==='DELIVERED'?'selected':''}>DELIVERED</option><option ${o.status==='CANCELLED'?'selected':''}>CANCELLED</option></select></div>`).join('')}
 async function status(x){await fetch(API_BASE+'/api/admin/orders/'+encodeURIComponent(x.dataset.id)+'/status',{method:'PATCH',headers:{'Content-Type':'application/json','x-redcore-admin-key':key},body:JSON.stringify({status:x.value})});load()}
 function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-</script></body></html>
+</script>
+<script>
+(function(){
+  if (localStorage.getItem("redcore_cookie_choice")) return;
+  var box=document.createElement("div");
+  box.className="rc-cookie";
+  box.innerHTML='<p>REDCORE는 사이트 이용 편의를 위해 필요한 쿠키 및 로컬 저장 기능을 사용합니다. 자세한 내용은 개인정보처리방침을 확인해주세요.</p><div class="rc-cookie-actions"><button id="rc-cookie-no">비동의</button><button id="rc-cookie-ok" class="accept">동의</button></div>';
+  document.body.appendChild(box);
+  function close(choice){ localStorage.setItem("redcore_cookie_choice",choice); box.remove(); }
+  document.getElementById("rc-cookie-ok").onclick=function(){close("accepted")};
+  document.getElementById("rc-cookie-no").onclick=function(){close("declined")};
+})();
+</script>
+
+</body></html>
