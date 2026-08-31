@@ -5,44 +5,10 @@
 <header class="header">
 <a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a>
 <nav class="nav"><a href="index.html">HOME</a><a href="shop.html">SHOP</a><a href="story.html">ABOUT</a><a href="customer.html">CUSTOMER</a></nav>
-<div class="actions"><a href="wishlist.html">♡</a><a class="cart-link" href="cart.html">CART <span class="count">0</span></a><a href="mypage.html">MY</a><button class="menu-btn">☰</button></div>
+<div class="actions"><a href="wishlist.html" aria-label="위시리스트">♡</a><a class="cart-link" href="cart.html" aria-label="장바구니">CART <span class="count">0</span></a><a href="mypage.html" aria-label="마이페이지">MY</a><button class="menu-btn" type="button" aria-label="메뉴 열기" aria-expanded="false">☰</button></div>
 </header><main class="page"><div class="container"><div class="kicker">REDCORE STORE</div><h1 class="page-title">SHOP</h1><p class="page-sub">새로운 시즌의 REDCORE 컬렉션을 만나보세요.</p><div class="shop-tools"><div class="filters"><button class="filter active">ALL</button><button class="filter">TOP</button><button class="filter">BOTTOM</button><button class="filter">ACCESSORY</button></div><span class="muted" style="font-size:10px">4 PRODUCTS</span></div><div id="shop-products" class="product-grid"></div></div></main>
 <div class="toast"></div>
-<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
+<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="notice.html">NOTICE</a><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
 <script src="script.js"></script>
-<script>
-(function(){
-  var overlay=document.createElement("div");
-  overlay.id="rc-page-transition";
-  document.documentElement.appendChild(overlay);
-
-  // Never animate the initial page in: prevents the white flash.
-  window.addEventListener("pageshow",function(){
-    overlay.classList.remove("on");
-    document.documentElement.style.background=getComputedStyle(document.body).backgroundColor || "";
-    document.body.style.opacity="1";
-  });
-
-  document.addEventListener("click",function(e){
-    var a=e.target.closest("a");
-    if(!a) return;
-    var href=a.getAttribute("href");
-    if(!href || href[0]==="#" || href.startsWith("mailto:") ||
-       href.startsWith("tel:") || a.target==="_blank" ||
-       e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-    try{
-      var u=new URL(href,location.href);
-      if(u.origin!==location.origin) return;
-      e.preventDefault();
-      overlay.classList.add("on");
-      setTimeout(function(){location.href=u.href},210);
-    }catch(_){}
-  });
-
-  window.addEventListener("pagehide",function(){
-    overlay.classList.remove("on");
-  });
-})();
-</script>
 
 </body></html>

@@ -1,42 +1,53 @@
-<!doctype html><html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>REDCORE ADMIN</title><link rel="stylesheet" href="style.css"></head><body><main class="page"><div class="container"><div class="kicker">REDCORE / ADMIN</div><h1 class="page-title">ORDERS</h1><div style="max-width:520px;margin-bottom:30px"><input id="admin-key" type="password" placeholder="관리자 키" style="width:100%;padding:14px;border:1px solid #ddd"><button class="btn wide" style="margin-top:10px" onclick="load()">ORDERS 불러오기</button><p class="muted" style="margin-top:8px">로컬 테스트 기본 키: local-admin-change-me</p></div><div id="admin-orders"><div class="empty">관리자 키를 입력하세요.</div></div></div></main><script>
-const API_BASE=location.protocol==='file:'?'http://localhost:3000':''; let key=localStorage.getItem('redcore_admin_key')||'';const keyEl=document.querySelector('#admin-key');keyEl.value=key;
-async function load(){key=keyEl.value.trim();localStorage.setItem('redcore_admin_key',key);const r=await fetch(API_BASE+'/api/admin/orders',{headers:{'x-redcore-admin-key':key}});const d=await r.json();const el=document.querySelector('#admin-orders');if(!r.ok){el.innerHTML='<div class="empty">관리자 키가 올바르지 않습니다.</div>';return;}if(!d.orders.length){el.innerHTML='<div class="empty">주문이 없습니다.</div>';return;}el.innerHTML=d.orders.slice().reverse().map(o=>`<div class="notice-row" style="display:block;padding:18px 0;border-bottom:1px solid #ddd"><b>${o.id}</b><br><span>${escapeHtml(o.customer.name)} · ${escapeHtml(o.customer.phone)}</span><br><span>${escapeHtml(o.customer.address)}</span><br><strong>${Number(o.total||0).toLocaleString('ko-KR')}원</strong><br><small>${new Date(o.createdAt).toLocaleString('ko-KR')}</small><br><select data-id="${o.id}" onchange="status(this)"><option ${o.status==='PAYMENT_PENDING'?'selected':''}>PAYMENT_PENDING</option><option ${o.status==='PAID'?'selected':''}>PAID</option><option ${o.status==='PREPARING'?'selected':''}>PREPARING</option><option ${o.status==='SHIPPED'?'selected':''}>SHIPPED</option><option ${o.status==='DELIVERED'?'selected':''}>DELIVERED</option><option ${o.status==='CANCELLED'?'selected':''}>CANCELLED</option></select></div>`).join('')}
-async function status(x){await fetch(API_BASE+'/api/admin/orders/'+encodeURIComponent(x.dataset.id)+'/status',{method:'PATCH',headers:{'Content-Type':'application/json','x-redcore-admin-key':key},body:JSON.stringify({status:x.value})});load()}
-function escapeHtml(v){return String(v??'').replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]))}
-</script>
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>REDCORE ADMIN</title><link rel="stylesheet" href="style.css"></head><body>
+<header class="header" style="grid-template-columns:1fr auto">
+<a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a>
+<a href="index.html" style="font-size:10px;font-weight:700;letter-spacing:1px">← BACK TO SITE</a>
+</header>
+<main class="page"><div class="container">
+<div class="kicker">REDCORE / ADMIN</div>
+<h1 class="page-title">ORDERS</h1>
+<div class="info-card" style="max-width:640px;margin-bottom:30px">
+  <p>이 페이지는 정적 사이트(GitHub Pages) 환경에 맞춘 데모 관리자 화면입니다. 서버가 없기 때문에 <b>이 브라우저에 저장된 주문만</b> 보여줍니다. 여러 기기·고객의 주문을 한 곳에서 모아 관리하려면 실제 서버(및 로그인 인증)가 필요하며, <code>/optional-backend-reference</code> 폴더의 스타터 API를 참고해 연결할 수 있습니다.</p>
+</div>
+<div id="admin-orders"><div class="empty">불러오는 중...</div></div>
+</div></main>
+<div class="toast"></div>
+<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="notice.html">NOTICE</a><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
+<script src="script.js"></script>
 <script>
-(function(){
-  var overlay=document.createElement("div");
-  overlay.id="rc-page-transition";
-  document.documentElement.appendChild(overlay);
-
-  // Never animate the initial page in: prevents the white flash.
-  window.addEventListener("pageshow",function(){
-    overlay.classList.remove("on");
-    document.documentElement.style.background=getComputedStyle(document.body).backgroundColor || "";
-    document.body.style.opacity="1";
-  });
-
-  document.addEventListener("click",function(e){
-    var a=e.target.closest("a");
-    if(!a) return;
-    var href=a.getAttribute("href");
-    if(!href || href[0]==="#" || href.startsWith("mailto:") ||
-       href.startsWith("tel:") || a.target==="_blank" ||
-       e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-    try{
-      var u=new URL(href,location.href);
-      if(u.origin!==location.origin) return;
-      e.preventDefault();
-      overlay.classList.add("on");
-      setTimeout(function(){location.href=u.href},210);
-    }catch(_){}
-  });
-
-  window.addEventListener("pagehide",function(){
-    overlay.classList.remove("on");
-  });
-})();
+const STATUSES=["PAYMENT_PENDING","PAID","PREPARING","SHIPPED","DELIVERED","CANCELLED"];
+function escapeHtml(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
+function renderAdminOrders(){
+  const el=document.querySelector("#admin-orders");
+  const list=Array.isArray(orders)?orders:[];
+  if(!list.length){el.innerHTML='<div class="empty">주문이 없습니다.</div>';return;}
+  el.innerHTML=list.map(o=>{
+    const customer=o.customer||{};
+    const items=Array.isArray(o.items)?o.items:[];
+    return `<div class="notice-row" style="display:block;padding:18px 0;border-bottom:1px solid var(--line)">
+      <b>${escapeHtml(o.id)}</b><br>
+      <span>${escapeHtml(customer.name)} · ${escapeHtml(customer.phone)}</span><br>
+      <span>${escapeHtml(customer.address)}</span>
+      ${customer.memo?`<br><span class="muted">${escapeHtml(customer.memo)}</span>`:""}<br>
+      <span class="muted">${items.map(i=>`${escapeHtml(i.name)} (${escapeHtml(i.size)}) x${Number(i.quantity)||0}`).join(", ")}</span><br>
+      <strong>${Number(o.total||0).toLocaleString("ko-KR")}원</strong><br>
+      <small>${o.createdAt?new Date(o.createdAt).toLocaleString("ko-KR"):(o.date||"")}</small><br>
+      <select data-id="${escapeHtml(o.id)}" onchange="updateStatus(this)" aria-label="${escapeHtml(o.id)} 주문 상태">
+        ${STATUSES.map(s=>`<option value="${s}" ${o.status===s?"selected":""}>${s}</option>`).join("")}
+      </select>
+    </div>`;
+  }).join("");
+}
+function updateStatus(select){
+  const target=orders.find(o=>o.id===select.dataset.id);
+  if(!target)return;
+  target.status=select.value;
+  target.updatedAt=new Date().toISOString();
+  save();
+  toast("주문 상태가 변경되었습니다.");
+}
+document.addEventListener("DOMContentLoaded",renderAdminOrders);
 </script>
-
 </body></html>

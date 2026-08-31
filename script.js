@@ -1,3 +1,11 @@
+/* =========================================================
+   REDCORE — site engine
+   Static front-end only (GitHub Pages friendly).
+   No calls are made to any /api/* backend from this file —
+   orders are created and stored on-device (localStorage) so
+   the shopping flow works fully on a static host.
+   ========================================================= */
+
 const PRODUCTS = [
  {id:"tee",name:"REDCORE T-SHIRT",price:49000,image:"images/tee-main.jpg",gallery:["images/tee-main.jpg","images/tee-model.jpg"],desc:"REDCORE의 시그니처 그래픽을 담은 베이직 티셔츠."},
  {id:"hoodie",name:"REDCORE HOODIE",price:89000,image:"images/hoodie.svg",desc:"도시적인 실루엣과 편안한 착용감의 헤비 후디."},
@@ -5,18 +13,33 @@ const PRODUCTS = [
  {id:"cap",name:"REDCORE CAP",price:39000,image:"images/cap.svg",desc:"REDCORE 로고 포인트 캡."}
 ];
 
-const API_BASE = location.protocol === "file:" ? "http://localhost:3000" : "";
-let cart = JSON.parse(localStorage.getItem("redcore_cart") || "[]");
-let wishlist = JSON.parse(localStorage.getItem("redcore_wishlist") || "[]");
-let orders = JSON.parse(localStorage.getItem("redcore_orders") || "[]");
-let user = JSON.parse(localStorage.getItem("redcore_user") || "null");
+let cart = safeParse("redcore_cart", []);
+let wishlist = safeParse("redcore_wishlist", []);
+let orders = safeParse("redcore_orders", []);
+let user = safeParse("redcore_user", null);
 window.__redcoreSelectedSize = "M";
 
-const won = n => Number(n).toLocaleString("ko-KR")+"원";
+function safeParse(key, fallback){
+  try{
+    const raw = localStorage.getItem(key);
+    if(raw===null) return fallback;
+    const val = JSON.parse(raw);
+    return val===null || val===undefined ? fallback : val;
+  }catch(_){ return fallback; }
+}
+
+const won = n => Number(n||0).toLocaleString("ko-KR")+"원";
 const findProduct = id => PRODUCTS.find(p=>p.id===id);
-function save(){ localStorage.setItem("redcore_cart",JSON.stringify(cart)); localStorage.setItem("redcore_wishlist",JSON.stringify(wishlist)); localStorage.setItem("redcore_orders",JSON.stringify(orders)); updateCount(); }
+
+function save(){
+  localStorage.setItem("redcore_cart",JSON.stringify(cart));
+  localStorage.setItem("redcore_wishlist",JSON.stringify(wishlist));
+  localStorage.setItem("redcore_orders",JSON.stringify(orders));
+  updateCount();
+}
 function updateCount(){ const n=cart.reduce((s,i)=>s+Number(i.qty||0),0); document.querySelectorAll(".count").forEach(x=>x.textContent=n); }
 function toast(msg){ let t=document.querySelector(".toast"); if(!t)return; t.textContent=msg;t.classList.add("show"); clearTimeout(window.__toast);window.__toast=setTimeout(()=>t.classList.remove("show"),2200); }
+
 function addToCart(id,size=window.__redcoreSelectedSize||"M"){
  const p=findProduct(id); if(!p)return;
  const item=cart.find(i=>i.id===id&&i.size===size);
@@ -30,56 +53,155 @@ function shippingFee(){return cartSubtotal()>=50000||cartSubtotal()===0?0:3000}
 function cartTotal(){return cartSubtotal()+shippingFee()}
 function changeQty(id,size,delta){ const x=cart.find(i=>i.id===id&&i.size===size); if(!x)return; x.qty+=delta;if(x.qty<=0)cart=cart.filter(i=>!(i.id===id&&i.size===size));save();renderCart(); }
 function removeItem(id,size){cart=cart.filter(i=>!(i.id===id&&i.size===size));save();renderCart();toast("상품을 삭제했습니다.");}
-function productCard(p){ const liked=wishlist.includes(p.id); return `<article class="product-card"><button class="heart" aria-label="찜" onclick="toggleWish('${p.id}')">${liked?"♥":"♡"}</button><a href="product.html?id=${p.id}"><div class="pic"><img src="${p.image}" alt="${p.name}"></div></a><div class="product-meta"><a href="product.html?id=${p.id}"><h3>${p.name}</h3></a><p>${won(p.price)}</p></div></article>`; }
+
+function productCard(p){
+  const liked=wishlist.includes(p.id);
+  return `<article class="product-card"><button class="heart" type="button" aria-label="${p.name} 찜하기" onclick="toggleWish('${p.id}')">${liked?"♥":"♡"}</button><a href="product.html?id=${p.id}"><div class="pic"><img src="${p.image}" alt="${p.name}" loading="lazy"></div></a><div class="product-meta"><a href="product.html?id=${p.id}"><h3>${p.name}</h3></a><p>${won(p.price)}</p></div></article>`;
+}
 function renderHome(){const el=document.querySelector("#home-products");if(el)el.innerHTML=PRODUCTS.slice(0,4).map(productCard).join("");}
 function renderShop(){const el=document.querySelector("#shop-products");if(el)el.innerHTML=PRODUCTS.map(productCard).join("");}
+
 function renderProduct(){
  const el=document.querySelector("#product-root");if(!el)return;
  const id=new URLSearchParams(location.search).get("id")||"tee",p=findProduct(id)||PRODUCTS[0],liked=wishlist.includes(p.id);
  const gallery=p.gallery||[p.image];
- el.innerHTML=`<div class="detail"><div class="detail-media"><div class="detail-image"><img id="product-main-image" src="${gallery[0]}" alt="${p.name} 제품 이미지"></div>${gallery.length>1?`<div class="product-thumbs">${gallery.map((src,i)=>`<button class="product-thumb ${i===0?"active":""}" type="button" onclick="selectProductImage(${i})"><img src="${src}" alt="${p.name} ${i===0?"제품 단독":"모델 착용"} 이미지"></button>`).join("")}</div>`:""}</div><div class="detail-info"><div class="eyebrow">REDCORE / 2026 SPRING</div><h1>${p.name}</h1><div class="price">${won(p.price)}</div><p class="description">${p.desc}<br>일상 속에서 자연스럽게 개성을 드러내도록 설계했습니다.</p><div class="options"><div class="option-row"><span>SIZE</span><div class="option-buttons">${["S","M","L","XL"].map(size=>`<button type="button" class="size ${size===window.__redcoreSelectedSize?"selected":""}" onclick="selectProductSize(this,'${size}')">${size}</button>`).join("")}</div></div><div class="option-row"><span>STOCK</span><span>AVAILABLE</span></div></div><div class="detail-actions"><button class="btn outline wide" onclick="toggleWish('${p.id}')">${liked?"♥ WISHLIST":"♡ WISHLIST"}</button><button class="btn wide" onclick="addToCart('${p.id}')">ADD TO CART</button></div><button class="btn wide" style="margin-top:8px" onclick="buyNow('${p.id}')">BUY NOW</button>${p.id==="tee"?`<div class="product-note"><b>REDCORE T-SHIRT</b><span>첫 번째는 제품 단독컷, 두 번째는 모델 착용컷입니다.</span></div>`:""}</div></div>`;
+ el.innerHTML=`<div class="detail"><div class="detail-media"><div class="detail-image"><img id="product-main-image" src="${gallery[0]}" alt="${p.name} 제품 이미지"></div>${gallery.length>1?`<div class="product-thumbs" role="group" aria-label="${p.name} 이미지 선택">${gallery.map((src,i)=>`<button class="product-thumb ${i===0?"active":""}" type="button" aria-label="${p.name} ${i===0?"제품 단독":"모델 착용"} 이미지 보기" onclick="selectProductImage(${i})"><img src="${src}" alt="${p.name} ${i===0?"제품 단독":"모델 착용"} 이미지"></button>`).join("")}</div>`:""}</div><div class="detail-info"><div class="eyebrow">REDCORE / 2026 SPRING</div><h1>${p.name}</h1><div class="price">${won(p.price)}</div><p class="description">${p.desc}<br>일상 속에서 자연스럽게 개성을 드러내도록 설계했습니다.</p><div class="options"><div class="option-row"><span id="size-label">SIZE</span><div class="option-buttons" role="group" aria-labelledby="size-label">${["S","M","L","XL"].map(size=>`<button type="button" class="size ${size===window.__redcoreSelectedSize?"selected":""}" aria-pressed="${size===window.__redcoreSelectedSize?"true":"false"}" onclick="selectProductSize(this,'${size}')">${size}</button>`).join("")}</div></div><div class="option-row"><span>STOCK</span><span>AVAILABLE</span></div></div><div class="detail-actions"><button type="button" class="btn outline wide" onclick="toggleWish('${p.id}')">${liked?"♥ WISHLIST":"♡ WISHLIST"}</button><button type="button" class="btn wide" onclick="addToCart('${p.id}')">ADD TO CART</button></div><button type="button" class="btn wide" style="margin-top:8px" onclick="buyNow('${p.id}')">BUY NOW</button>${p.id==="tee"?`<div class="product-note"><b>REDCORE T-SHIRT</b><span>첫 번째는 제품 단독컷, 두 번째는 모델 착용컷입니다.</span></div>`:""}</div></div>`;
 }
 function selectProductImage(index){const main=document.querySelector("#product-main-image"),thumbs=document.querySelectorAll(".product-thumb");if(!main||!thumbs[index])return;const img=thumbs[index].querySelector("img");main.src=img.src;main.alt=img.alt;thumbs.forEach((x,i)=>x.classList.toggle("active",i===index));}
-function selectProductSize(button,size){document.querySelectorAll(".size").forEach(x=>x.classList.remove("selected"));button.classList.add("selected");window.__redcoreSelectedSize=size;}
+function selectProductSize(button,size){document.querySelectorAll(".size").forEach(x=>{x.classList.remove("selected");x.setAttribute("aria-pressed","false");});button.classList.add("selected");button.setAttribute("aria-pressed","true");window.__redcoreSelectedSize=size;}
+
 function renderCart(){
  const el=document.querySelector("#cart-root");if(!el)return;
  if(!cart.length){el.innerHTML=`<div class="empty"><p>장바구니가 비어 있습니다.</p><a class="btn" href="shop.html" style="margin-top:20px">SHOP NOW</a></div>`;return;}
- el.innerHTML=`${cart.map(i=>{const p=findProduct(i.id);return `<div class="cart-row"><img src="${p.image}" alt="${p.name}"><div><b>${p.name}</b><div class="muted" style="font-size:10px;margin-top:4px">SIZE ${i.size||"M"} · ${won(p.price)}</div></div><div class="qty"><button onclick="changeQty('${p.id}','${i.size||"M"}',-1)">−</button><span>${i.qty}</span><button onclick="changeQty('${p.id}','${i.size||"M"}',1)">+</button></div><strong class="line-total">${won(p.price*i.qty)}</strong><button class="remove" onclick="removeItem('${p.id}','${i.size||"M"}')">삭제</button></div>`}).join("")}<div class="cart-summary"><div class="summary-line"><span>상품 금액</span><b>${won(cartSubtotal())}</b></div><div class="summary-line"><span>배송비</span><span>${shippingFee()===0?"무료":won(shippingFee())}</span></div><div class="summary-line summary-total"><span>TOTAL</span><b>${won(cartTotal())}</b></div><a href="order.html" class="btn wide" style="margin-top:18px">CHECKOUT</a></div>`;
+ el.innerHTML=`${cart.map(i=>{const p=findProduct(i.id);if(!p)return "";return `<div class="cart-row"><img src="${p.image}" alt="${p.name}"><div><b>${p.name}</b><div class="muted" style="font-size:10px;margin-top:4px">SIZE ${i.size||"M"} · ${won(p.price)}</div></div><div class="qty"><button type="button" aria-label="수량 감소" onclick="changeQty('${p.id}','${i.size||"M"}',-1)">−</button><span aria-live="polite">${i.qty}</span><button type="button" aria-label="수량 증가" onclick="changeQty('${p.id}','${i.size||"M"}',1)">+</button></div><strong class="line-total">${won(p.price*i.qty)}</strong><button type="button" class="remove" onclick="removeItem('${p.id}','${i.size||"M"}')">삭제</button></div>`}).join("")}<div class="cart-summary"><div class="summary-line"><span>상품 금액</span><b>${won(cartSubtotal())}</b></div><div class="summary-line"><span>배송비</span><span>${shippingFee()===0?"무료":won(shippingFee())}</span></div><div class="summary-line summary-total"><span>TOTAL</span><b>${won(cartTotal())}</b></div><a href="order.html" class="btn wide" style="margin-top:18px">CHECKOUT</a></div>`;
 }
 function renderWishlist(){const el=document.querySelector("#wishlist-root");if(!el)return;const ps=wishlist.map(findProduct).filter(Boolean);el.innerHTML=ps.length?`<div class="product-grid">${ps.map(productCard).join("")}</div>`:`<div class="empty">찜한 상품이 없습니다.</div>`;}
-function renderOrders(){const el=document.querySelector("#orders-root");if(!el)return;el.innerHTML=orders.length?orders.map(o=>`<div class="notice-row"><span>${o.date}</span><b>${o.number}</b><span>${won(o.total)}</span></div>`).join(""):`<div class="empty">주문 내역이 없습니다.</div>`;}
-function renderMypage(){const name=document.querySelector("#member-name");if(name)name.textContent=user?.name||"GUEST";const ordersEl=document.querySelector("#order-count");if(ordersEl)ordersEl.textContent=orders.length;}
-function bindForms(){
- const login=document.querySelector("#login-form"); if(login)login.addEventListener("submit",e=>{e.preventDefault();const id=login.id.value.trim();if(!id)return toast("아이디를 입력해주세요.");user={name:id};localStorage.setItem("redcore_user",JSON.stringify(user));toast("로그인되었습니다.");setTimeout(()=>location.href="mypage.html",400)});
- const signup=document.querySelector("#signup-form"); if(signup)signup.addEventListener("submit",e=>{e.preventDefault();const name=signup.name.value.trim(),pw=signup.password.value;if(!name||!pw)return toast("필수 정보를 입력해주세요.");user={name,id:signup.id.value};localStorage.setItem("redcore_user",JSON.stringify(user));toast("회원가입이 완료되었습니다.");setTimeout(()=>location.href="mypage.html",500)});
- const order=document.querySelector("#order-form");
- if(order)order.addEventListener("submit",async e=>{
-  e.preventDefault(); if(!cart.length)return toast("장바구니가 비어 있습니다.");
-  const customer={name:order.name.value.trim(),phone:order.phone.value.trim(),address:order.address.value.trim(),memo:order.memo.value.trim()};
-  if(!/^01[0-9]-?\d{3,4}-?\d{4}$/.test(customer.phone.replace(/\s/g,"")))return toast("휴대폰 번호를 확인해주세요.");
-  const items=cart.map(i=>{const p=findProduct(i.id);return {productId:i.id,name:p?.name||i.id,size:i.size||"M",quantity:Number(i.qty),price:Number(p?.price||0)}});
-  const btn=order.querySelector("button[type=submit]");if(btn){btn.disabled=true;btn.textContent="PROCESSING...";}
-  try{const r=await fetch(API_BASE+"/api/orders",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({items,customer})});const data=await r.json();if(!r.ok)throw new Error(data.error||"주문 생성에 실패했습니다.");const total=Number(data.order.total);orders.unshift({number:data.order.id,date:new Date(data.order.createdAt).toLocaleDateString("ko-KR"),total,status:data.order.status});cart=[];save();location.href="complete.html?no="+encodeURIComponent(data.order.id);}catch(err){if(btn){btn.disabled=false;btn.textContent="PLACE ORDER";}const msg=err instanceof TypeError?"주문 서버에 연결할 수 없습니다. REDCORE_START.bat로 서버를 먼저 실행해주세요.":(err.message||"주문에 실패했습니다.");toast(msg);}
- });
- document.querySelectorAll(".faq-item").forEach(x=>x.addEventListener("click",()=>x.classList.toggle("open")));
-}
-document.addEventListener("DOMContentLoaded",()=>{updateCount();renderHome();renderShop();renderProduct();renderCart();renderWishlist();renderOrders();renderMypage();bindForms();const menu=document.querySelector(".menu-btn"),header=document.querySelector(".header");if(menu)menu.addEventListener("click",()=>header.classList.toggle("menu-open"));});
+function renderOrders(){const el=document.querySelector("#orders-root");if(!el)return;el.innerHTML=orders.length?orders.map(o=>`<div class="notice-row"><span>${o.date}</span><b>${o.id}</b><span>${won(o.total)}</span></div>`).join(""):`<div class="empty">주문 내역이 없습니다.</div>`;}
+function renderMypage(){const name=document.querySelector("#member-name");if(name)name.textContent=user?.name||"GUEST";const ordersEl=document.querySelector("#order-count");if(ordersEl)ordersEl.textContent=orders.length;const guestPrompt=document.querySelector("#guest-login-prompt");if(guestPrompt)guestPrompt.style.display=user?"none":"";}
 
-/* REDCORE page transitions */
+/* Local order-number generator: RC-YYYYMMDD-XXXX (no backend needed) */
+function generateOrderId(){
+  const d=new Date();
+  const ymd=d.getFullYear()+String(d.getMonth()+1).padStart(2,"0")+String(d.getDate()).padStart(2,"0");
+  const rand=Math.random().toString(36).slice(2,6).toUpperCase();
+  return `RC-${ymd}-${rand}`;
+}
+
+function bindForms(){
+ const login=document.querySelector("#login-form");
+ if(login)login.addEventListener("submit",e=>{e.preventDefault();const id=login.id.value.trim();if(!id)return toast("아이디를 입력해주세요.");user={name:id};localStorage.setItem("redcore_user",JSON.stringify(user));toast("로그인되었습니다.");setTimeout(()=>location.href="mypage.html",400)});
+
+ const signup=document.querySelector("#signup-form");
+ if(signup)signup.addEventListener("submit",e=>{e.preventDefault();const name=signup.name.value.trim(),pw=signup.password.value;if(!name||!pw)return toast("필수 정보를 입력해주세요.");user={name,id:signup.id.value};localStorage.setItem("redcore_user",JSON.stringify(user));toast("회원가입이 완료되었습니다.");setTimeout(()=>location.href="mypage.html",500)});
+
+ const order=document.querySelector("#order-form");
+ if(order)order.addEventListener("submit",e=>{
+  e.preventDefault();
+  if(!cart.length)return toast("장바구니가 비어 있습니다.");
+  const customer={name:order.name.value.trim(),phone:order.phone.value.trim(),address:order.address.value.trim(),memo:order.memo.value.trim()};
+  if(!customer.name||!customer.address)return toast("주문자 정보를 확인해주세요.");
+  if(!/^01[0-9]-?\d{3,4}-?\d{4}$/.test(customer.phone.replace(/\s/g,"")))return toast("휴대폰 번호를 확인해주세요.");
+
+  const items=cart.map(i=>{const p=findProduct(i.id);return {productId:i.id,name:p?p.name:i.id,size:i.size||"M",quantity:Number(i.qty),price:Number(p?p.price:0)}});
+  const btn=order.querySelector("button[type=submit], button:not([type])");
+  if(btn){btn.disabled=true;btn.textContent="PROCESSING...";}
+
+  /* This site runs as a static page (GitHub Pages), so there is no
+     live payment/order server to call. The order is created and
+     stored locally so the checkout flow works end-to-end. To connect
+     a real PG/backend later, replace this block with an API call —
+     see /optional-backend-reference for a starter Node/Express API
+     that accepts the same {items, customer} shape. */
+  setTimeout(()=>{
+    const newOrder={
+      id:generateOrderId(),
+      items,
+      customer,
+      subtotal:cartSubtotal(),
+      shipping:shippingFee(),
+      total:cartTotal(),
+      status:"PAYMENT_PENDING",
+      date:new Date().toLocaleDateString("ko-KR"),
+      createdAt:new Date().toISOString()
+    };
+    orders.unshift(newOrder);
+    cart=[];
+    save();
+    location.href="complete.html?no="+encodeURIComponent(newOrder.id);
+  },350);
+ });
+
+ document.querySelectorAll(".faq-item").forEach(x=>{
+   x.setAttribute("tabindex","0");
+   x.setAttribute("role","button");
+   const q = x.querySelector(".faq-q");
+   if(q) x.setAttribute("aria-expanded","false");
+   const toggle=()=>{x.classList.toggle("open");if(q)x.setAttribute("aria-expanded",x.classList.contains("open")?"true":"false");};
+   x.addEventListener("click",toggle);
+   x.addEventListener("keydown",e=>{if(e.key==="Enter"||e.key===" "){e.preventDefault();toggle();}});
+ });
+}
+
+/* =========================================================
+   Cookie / local-storage notice
+   ========================================================= */
+function initCookieNotice(){
+  if(localStorage.getItem("redcore_cookie_consent")) return;
+  const bar=document.createElement("div");
+  bar.className="cookie-bar";
+  bar.setAttribute("role","dialog");
+  bar.setAttribute("aria-label","쿠키 및 저장 기능 안내");
+  bar.innerHTML=`<p>REDCORE는 사이트 이용 편의를 위해 쿠키 및 로컬 저장 기능을 사용합니다. 자세한 내용은 <a href="privacy.html">개인정보처리방침</a>에서 확인할 수 있습니다.</p><div class="cookie-actions"><button type="button" class="btn outline" data-consent="declined">비동의</button><button type="button" class="btn" data-consent="accepted">동의</button></div>`;
+  document.body.appendChild(bar);
+  requestAnimationFrame(()=>bar.classList.add("show"));
+  bar.addEventListener("click",e=>{
+    const btn=e.target.closest("button[data-consent]");
+    if(!btn)return;
+    localStorage.setItem("redcore_cookie_consent",btn.dataset.consent);
+    bar.classList.remove("show");
+    setTimeout(()=>bar.remove(),300);
+  });
+}
+
+document.addEventListener("DOMContentLoaded",()=>{
+  updateCount();renderHome();renderShop();renderProduct();renderCart();renderWishlist();renderOrders();renderMypage();bindForms();
+  const menu=document.querySelector(".menu-btn"),header=document.querySelector(".header");
+  if(menu&&header)menu.addEventListener("click",()=>{const open=header.classList.toggle("menu-open");menu.setAttribute("aria-expanded",open?"true":"false");});
+  initCookieNotice();
+});
+
+/* =========================================================
+   Page transitions (single implementation, used on every page)
+   - Never animates the very first paint (prevents white flash)
+   - Handles back/forward (bfcache) cleanly via pageshow
+   ========================================================= */
 (function(){
-  function isInternalLink(a){
-    if(!a || !a.href) return false;
-    if(a.target && a.target !== '_self') return false;
-    if(a.hasAttribute('download')) return false;
-    const url=new URL(a.href,location.href);
-    return url.origin===location.origin && url.pathname!==location.pathname || (url.origin===location.origin && url.pathname===location.pathname && url.search!==location.search);
-  }
-  document.addEventListener('click',function(e){
-    const a=e.target.closest('a');
-    if(!isInternalLink(a)) return;
-    if(e.metaKey||e.ctrlKey||e.shiftKey||e.altKey) return;
-    e.preventDefault();
-    document.body.classList.add('page-leave');
-    setTimeout(()=>{location.href=a.href;},220);
+  const overlay=document.createElement("div");
+  overlay.id="rc-page-transition";
+  document.documentElement.appendChild(overlay);
+
+  window.addEventListener("pageshow",function(){
+    overlay.classList.remove("on");
+    document.body.style.opacity="1";
+  });
+
+  document.addEventListener("click",function(e){
+    const a=e.target.closest("a");
+    if(!a) return;
+    const href=a.getAttribute("href");
+    if(!href || href[0]==="#" || href.startsWith("mailto:") ||
+       href.startsWith("tel:") || a.target==="_blank" ||
+       e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    try{
+      const u=new URL(href,location.href);
+      if(u.origin!==location.origin) return;
+      e.preventDefault();
+      overlay.classList.add("on");
+      setTimeout(function(){location.href=u.href;},210);
+    }catch(_){}
+  });
+
+  window.addEventListener("pagehide",function(){
+    overlay.classList.remove("on");
   });
 })();

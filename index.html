@@ -5,7 +5,7 @@
 <header class="header">
 <a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a>
 <nav class="nav"><a href="index.html">HOME</a><a href="shop.html">SHOP</a><a href="story.html">ABOUT</a><a href="customer.html">CUSTOMER</a></nav>
-<div class="actions"><a href="wishlist.html">♡</a><a class="cart-link" href="cart.html">CART <span class="count">0</span></a><a href="mypage.html">MY</a><button class="menu-btn">☰</button></div>
+<div class="actions"><a href="wishlist.html" aria-label="위시리스트">♡</a><a class="cart-link" href="cart.html" aria-label="장바구니">CART <span class="count">0</span></a><a href="mypage.html" aria-label="마이페이지">MY</a><button class="menu-btn" type="button" aria-label="메뉴 열기" aria-expanded="false">☰</button></div>
 </header><main>
 <section class="hero">
 <div class="hero-copy"><div class="kicker">2026 SPRING / 01</div><h1>MAKE<br>YOUR <em>mark.</em></h1><p>일상의 움직임에 선명한 태도를 더하는 REDCORE의 새로운 시즌 컬렉션.</p><a class="btn" href="shop.html">컬렉션 보기 →</a></div>
@@ -15,41 +15,7 @@
 <section class="story-band"><div class="container story-inner"><div><div class="kicker">REDCORE / ABOUT</div><h2>WEAR<br>YOUR<br>IDENTITY.</h2></div><div><p>REDCORE는 거리의 에너지와 개인의 취향을 하나의 언어로 만듭니다. 과한 장식보다 오래 입을 수 있는 형태, 그리고 한눈에 기억되는 디테일을 추구합니다.</p><a class="btn light" href="story.html">OUR STORY →</a></div></div></section>
 </main>
 <div class="toast"></div>
-<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
+<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="notice.html">NOTICE</a><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
 <script src="script.js"></script>
-<script>
-(function(){
-  var overlay=document.createElement("div");
-  overlay.id="rc-page-transition";
-  document.documentElement.appendChild(overlay);
-
-  // Never animate the initial page in: prevents the white flash.
-  window.addEventListener("pageshow",function(){
-    overlay.classList.remove("on");
-    document.documentElement.style.background=getComputedStyle(document.body).backgroundColor || "";
-    document.body.style.opacity="1";
-  });
-
-  document.addEventListener("click",function(e){
-    var a=e.target.closest("a");
-    if(!a) return;
-    var href=a.getAttribute("href");
-    if(!href || href[0]==="#" || href.startsWith("mailto:") ||
-       href.startsWith("tel:") || a.target==="_blank" ||
-       e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
-    try{
-      var u=new URL(href,location.href);
-      if(u.origin!==location.origin) return;
-      e.preventDefault();
-      overlay.classList.add("on");
-      setTimeout(function(){location.href=u.href},210);
-    }catch(_){}
-  });
-
-  window.addEventListener("pagehide",function(){
-    overlay.classList.remove("on");
-  });
-})();
-</script>
 
 </body></html>
