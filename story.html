@@ -3,7 +3,7 @@
 <title>ABOUT — REDCORE</title><link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar">FREE SHIPPING ON ALL ORDERS OVER ₩50,000 · 2026 SPRING DROP NOW AVAILABLE</div>
 <header class="header">
-<a class="logo" href="index.html" aria-label="REDCORE HOME"><img src="images/redcore-logo-brand.png" alt="REDCORE"></a>
+<a class="logo" href="index.html" aria-label="REDCORE HOME"></a>
 <nav class="nav"><a href="index.html">HOME</a><a href="shop.html">SHOP</a><a href="story.html">ABOUT</a><a href="customer.html">CUSTOMER</a></nav>
 <div class="actions"><a href="wishlist.html">♡</a><a class="cart-link" href="cart.html">CART <span class="count">0</span></a><a href="mypage.html">MY</a><button class="menu-btn">☰</button></div>
 </header><main class="page"><div class="container"><div class="kicker">ABOUT REDCORE</div><h1 class="page-title">OUR STORY</h1><div class="story-inner" style="grid-template-columns:1fr 1fr;gap:70px"><div style="background:#1d201f;color:#fff;padding:55px;min-height:420px;display:flex;align-items:center"><h2 style="font-size:62px;line-height:.88;letter-spacing:-4px">BREAK<br>THE<br>STANDARD.</h2></div><div><p style="font-size:14px;line-height:2;color:#5f5955">REDCORE는 평범함에 질문을 던지는 스트릿 브랜드입니다. 옷은 단순히 몸을 감싸는 물건이 아니라 자신이 어떤 사람인지 보여주는 하나의 언어라고 믿습니다.</p><p style="font-size:14px;line-height:2;color:#5f5955;margin-top:25px">우리는 절제된 컬러와 강한 그래픽, 오래 사용할 수 있는 기본적인 형태를 바탕으로 매 시즌 새로운 태도를 제안합니다.</p></div></div></div></main>
@@ -12,14 +12,36 @@
 <script src="script.js"></script>
 <script>
 (function(){
-  if (localStorage.getItem("redcore_cookie_choice")) return;
-  var box=document.createElement("div");
-  box.className="rc-cookie";
-  box.innerHTML='<p>REDCORE는 사이트 이용 편의를 위해 필요한 쿠키 및 로컬 저장 기능을 사용합니다. 자세한 내용은 개인정보처리방침을 확인해주세요.</p><div class="rc-cookie-actions"><button id="rc-cookie-no">비동의</button><button id="rc-cookie-ok" class="accept">동의</button></div>';
-  document.body.appendChild(box);
-  function close(choice){ localStorage.setItem("redcore_cookie_choice",choice); box.remove(); }
-  document.getElementById("rc-cookie-ok").onclick=function(){close("accepted")};
-  document.getElementById("rc-cookie-no").onclick=function(){close("declined")};
+  var overlay=document.createElement("div");
+  overlay.id="rc-page-transition";
+  document.documentElement.appendChild(overlay);
+
+  // Never animate the initial page in: prevents the white flash.
+  window.addEventListener("pageshow",function(){
+    overlay.classList.remove("on");
+    document.documentElement.style.background=getComputedStyle(document.body).backgroundColor || "";
+    document.body.style.opacity="1";
+  });
+
+  document.addEventListener("click",function(e){
+    var a=e.target.closest("a");
+    if(!a) return;
+    var href=a.getAttribute("href");
+    if(!href || href[0]==="#" || href.startsWith("mailto:") ||
+       href.startsWith("tel:") || a.target==="_blank" ||
+       e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+    try{
+      var u=new URL(href,location.href);
+      if(u.origin!==location.origin) return;
+      e.preventDefault();
+      overlay.classList.add("on");
+      setTimeout(function(){location.href=u.href},210);
+    }catch(_){}
+  });
+
+  window.addEventListener("pagehide",function(){
+    overlay.classList.remove("on");
+  });
 })();
 </script>
 
