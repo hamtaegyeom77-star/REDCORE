@@ -124,3 +124,7 @@ body{opacity:1;transform:none}
 .logo .logo-red { color:#e21b2d !important; }
 .logo .logo-core { color:#171918 !important; }
 .logo img { display:none !important; }
+
+/* Final REDCORE wordmark */
+.logo .logo-red { color:#e21b2d !important; display:inline; }
+.logo .logo-core { color:#171918 !important; display:inline; }
