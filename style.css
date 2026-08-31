@@ -39,6 +39,30 @@ img{max-width:100%;display:block}
 .cart-wrap{max-width:1000px;margin:auto}.cart-row{display:grid;grid-template-columns:100px 1fr auto auto auto;gap:20px;align-items:center;border-top:1px solid var(--line);padding:20px 0}.cart-row img{width:100px;aspect-ratio:1/1;object-fit:cover;background:#eee}.qty{display:flex;align-items:center;gap:10px}.qty button{width:28px;height:28px;border:1px solid var(--line);background:#fff}.remove{border:0;background:none;color:#8b8580;font-size:10px}.cart-summary{margin-left:auto;max-width:330px;border-top:2px solid var(--ink);padding-top:18px;margin-top:30px}.summary-line{display:flex;justify-content:space-between;margin:9px 0;font-size:12px}.summary-total{font-size:18px;font-weight:800;padding-top:12px;border-top:1px solid var(--line)}
 .empty{padding:70px 20px;text-align:center;color:var(--muted);border:1px dashed var(--line)}
 .info-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px}.info-card{background:#fff;border:1px solid var(--line);padding:28px}.info-card h3{font-size:14px;margin-bottom:12px}.info-card p,.info-card li{font-size:12px;color:#67615d;line-height:1.9}.faq{border-top:1px solid var(--line)}.faq-item{border-bottom:1px solid var(--line);padding:18px 0}.faq-q{font-size:12px;font-weight:800}.faq-a{font-size:12px;color:#706a66;margin-top:9px;display:none}.faq-item.open .faq-a{display:block}
+
+/* Legal documents (Terms / Privacy) */
+.legal-notice{background:#fff;border:1px solid var(--accent);border-left:4px solid var(--accent);padding:18px 22px;font-size:11px;color:#5c433f;line-height:1.9;margin-bottom:30px}
+.legal-notice b{color:var(--accent)}
+.legal-meta{font-size:11px;color:var(--muted);margin-bottom:30px;line-height:1.9}
+.legal-toc{background:#fff;border:1px solid var(--line);padding:22px 26px;margin-bottom:36px}
+.legal-toc h2{font-size:12px;letter-spacing:1px;margin-bottom:12px;color:var(--muted)}
+.legal-toc ol{columns:2;column-gap:24px;padding-left:18px;font-size:11px;line-height:2.1}
+.legal-toc a{color:#4a4642}
+.legal-toc a:hover{color:var(--accent)}
+.legal-doc article{border-top:1px solid var(--line);padding:30px 0;scroll-margin-top:90px}
+.legal-doc article:last-of-type{border-bottom:1px solid var(--line)}
+.legal-doc h2{font-size:17px;letter-spacing:-.4px;margin-bottom:14px;display:flex;align-items:baseline;gap:8px}
+.legal-doc h2 .num{color:var(--accent);font-size:12px;font-weight:800;letter-spacing:1px}
+.legal-doc h3{font-size:12.5px;font-weight:800;margin:18px 0 8px}
+.legal-doc p{font-size:12.5px;color:#5c5652;line-height:1.95;margin-bottom:10px}
+.legal-doc ol,.legal-doc ul{padding-left:20px;margin:8px 0 14px}
+.legal-doc li{font-size:12.5px;color:#5c5652;line-height:1.95;margin-bottom:6px}
+.legal-doc table{width:100%;border-collapse:collapse;margin:14px 0 18px;font-size:11.5px}
+.legal-doc th,.legal-doc td{border:1px solid var(--line);padding:11px 13px;text-align:left;color:#5c5652;line-height:1.7}
+.legal-doc th{background:#f4f1ef;font-weight:800;color:var(--ink)}
+.legal-doc .fill{font-weight:700}
+.fill{color:var(--accent)}
+@media(max-width:700px){.legal-toc ol{columns:1}}
 .notice-list{border-top:1px solid var(--line)}.notice-row{display:grid;grid-template-columns:80px 1fr 100px;border-bottom:1px solid var(--line);padding:18px 0;font-size:11px}.muted{color:var(--muted)}
 .mypage-grid{display:grid;grid-template-columns:220px 1fr;gap:45px}.side-nav{border-top:2px solid var(--ink)}.side-nav a{display:block;padding:13px 0;border-bottom:1px solid var(--line);font-size:11px}.dashboard{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}.stat{background:#fff;border:1px solid var(--line);padding:25px}.stat b{font-size:24px;display:block;margin-top:7px}
 .toast{position:fixed;bottom:25px;left:50%;transform:translateX(-50%) translateY(20px);background:#171918;color:#fff;padding:12px 18px;font-size:11px;opacity:0;pointer-events:none;transition:.25s;z-index:99}.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
@@ -49,20 +73,13 @@ img{max-width:100%;display:block}
 @media(max-width:520px){.product-grid{gap:8px}.product-meta{padding:12px 2px 18px}.hero h1{letter-spacing:-4px}.dashboard{grid-template-columns:1fr}.form-card{padding:28px 20px}.detail-actions{grid-template-columns:1fr}.shop-tools{align-items:flex-start;gap:12px;flex-direction:column}}
 
 
-/* REDCORE T-SHIRT product gallery */
+/* REDCORE product detail media */
 .detail-media{min-width:0}
-.product-thumbs{display:flex;gap:10px;margin-top:12px;overflow-x:auto;padding-bottom:4px}
-.product-thumb{flex:0 0 82px;width:82px;height:82px;padding:0;border:1px solid var(--line);background:#fff;cursor:pointer;overflow:hidden}
-.product-thumb.active{border:2px solid var(--ink)}
-.product-thumb img{width:100%;height:100%;object-fit:cover;display:block}
-.product-note{margin-top:28px;padding-top:18px;border-top:1px solid var(--line);display:flex;flex-direction:column;gap:7px;font-size:11px}
-.product-note span{color:var(--muted);line-height:1.6}
 @media(max-width:760px){
  .detail{grid-template-columns:1fr;gap:28px}
  .detail-info{padding-top:0}
  .detail-info h1{font-size:32px}
  .detail-image img{aspect-ratio:1/1;object-fit:contain;background:#f4f4f4}
- .product-thumb{flex-basis:72px;width:72px;height:72px}
 }
 
 /* Smooth page entrance */
@@ -87,7 +104,7 @@ body{animation:redcorePageIn .55s cubic-bezier(.22,.61,.36,1) both}
 .product-card:hover .pic img{transform:scale(1.045)}
 
 /* Section motion */
-.section-head,.story-inner,.page-title,.page-sub,.shop-tools,.detail,.form-card,.cart-wrap,.info-grid,.notice-list,.mypage-grid,.faq,.product-note{
+.section-head,.story-inner,.page-title,.page-sub,.shop-tools,.detail,.form-card,.cart-wrap,.info-grid,.notice-list,.mypage-grid,.faq{
   animation:redcoreReveal .7s .08s cubic-bezier(.22,.61,.36,1) both;
 }
 .product-grid .product-card{animation:redcoreCardIn .65s cubic-bezier(.22,.61,.36,1) both}
