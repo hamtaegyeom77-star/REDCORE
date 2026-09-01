@@ -1,14 +1,33 @@
 <!doctype html>
 <html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>ORDER HISTORY — REDCORE</title><link rel="stylesheet" href="style.css"></head><body>
+<title>SELLER CENTER — 로그인 — REDCORE</title><link rel="stylesheet" href="style.css"></head><body>
 <div class="topbar">FREE SHIPPING ON ALL ORDERS OVER ₩50,000 · 2026 SPRING DROP NOW AVAILABLE</div>
 <header class="header">
 <a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a>
 <nav class="nav"><a href="index.html">HOME</a><a href="shop.html">SHOP</a><a href="story.html">ABOUT</a><a href="customer.html">CUSTOMER</a></nav>
 <div class="actions"><a href="wishlist.html" aria-label="위시리스트">♡</a><a class="cart-link" href="cart.html" aria-label="장바구니">CART <span class="count">0</span></a><a href="mypage.html" aria-label="마이페이지">MY</a><button class="menu-btn" type="button" aria-label="메뉴 열기" aria-expanded="false">☰</button></div>
-</header><main class="page"><div class="container"><div class="kicker">ACCOUNT</div><h1 class="page-title">ORDER HISTORY</h1><div class="notice-list" id="orders-root"></div></div></main>
+</header><main class="page"><div class="container form-page"><div class="form-card"><div class="kicker">SELLER CENTER</div><h1>SELLER LOGIN</h1>
+<p class="form-help" style="margin-top:-14px;margin-bottom:22px">데모 로그인입니다. 실제 비밀번호 검증·인증서버는 연결되어 있지 않으며, 승인된 판매자 아이디인지만 확인합니다.</p>
+<form id="seller-login-form"><div class="field"><label>아이디</label><input name="username" autocomplete="username" required></div><div class="field"><label>비밀번호</label><input name="password" type="password" autocomplete="current-password" required></div><button class="btn wide">LOGIN</button></form>
+<p class="form-help">아직 입점 신청 전이신가요? <a href="seller-signup.html"><b>입점 신청하기</b></a></p>
+</div></div></main>
 <div class="toast"></div>
 <footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="seller-signup.html">SELLER CENTER</a><a href="notice.html">NOTICE</a><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
 <script src="script.js"></script>
-
+<script>
+document.addEventListener("DOMContentLoaded", ()=>{
+  const form = document.querySelector("#seller-login-form");
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    const result = sellerLoginAttempt(fd.get("username"));
+    if(result.ok){
+      toast("로그인되었습니다.");
+      setTimeout(()=>location.href="seller-dashboard.html", 400);
+    } else {
+      toast(result.reason);
+    }
+  });
+});
+</script>
 </body></html>

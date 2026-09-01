@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SELLER CENTER — 대시보드 — REDCORE</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar">FREE SHIPPING ON ALL ORDERS OVER ₩50,000 · 2026 SPRING DROP NOW AVAILABLE</div>
+<header class="header">
+<a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a>
+<nav class="nav"><a href="index.html">HOME</a><a href="shop.html">SHOP</a><a href="story.html">ABOUT</a><a href="customer.html">CUSTOMER</a></nav>
+<div class="actions"><a href="wishlist.html" aria-label="위시리스트">♡</a><a class="cart-link" href="cart.html" aria-label="장바구니">CART <span class="count">0</span></a><a href="mypage.html" aria-label="마이페이지">MY</a><button class="menu-btn" type="button" aria-label="메뉴 열기" aria-expanded="false">☰</button></div>
+</header>
+<main class="page"><div class="container">
+<div class="kicker">SELLER CENTER</div><h1 class="page-title">DASHBOARD</h1>
+<div class="mypage-grid">
+<aside class="side-nav">
+<a href="seller-dashboard.html">DASHBOARD</a>
+<a href="seller-products.html">상품 등록/관리</a>
+<a href="#" id="seller-logout-link">로그아웃</a>
+</aside>
+<section id="seller-root">
+<div class="empty">불러오는 중...</div>
+</section>
+</div>
+</div></main>
+<div class="toast"></div>
+<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="seller-signup.html">SELLER CENTER</a><a href="notice.html">NOTICE</a><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
+<script src="script.js"></script>
+<script>
+function renderSellerDashboard(){
+  const root = document.querySelector("#seller-root");
+  const seller = currentSeller();
+  if(!seller){
+    root.innerHTML = `<div class="empty"><p>로그인이 필요합니다.</p><a class="btn" href="seller-login.html" style="margin-top:20px">SELLER LOGIN</a></div>`;
+    return;
+  }
+  const stats = sellerStats(seller.id);
+  const won = n => Number(n||0).toLocaleString("ko-KR")+"원";
+  root.innerHTML = `
+    <h2 style="font-size:18px;margin-bottom:6px">HELLO, ${seller.businessName}</h2>
+    <p class="muted" style="font-size:11px;margin-bottom:22px">판매자 상태: <b>${seller.status}</b> · 아이디 ${seller.username}</p>
+    <div class="dashboard" style="grid-template-columns:repeat(3,1fr)">
+      <div class="stat"><small class="muted">오늘 판매금액</small><b>${won(stats.todaySales)}</b></div>
+      <div class="stat"><small class="muted">이번 달 판매금액</small><b>${won(stats.monthSales)}</b></div>
+      <div class="stat"><small class="muted">전체 주문수</small><b>${stats.orderCount}</b></div>
+      <div class="stat"><small class="muted">배송대기(PAID)</small><b>${stats.counts.PAID}</b></div>
+      <div class="stat"><small class="muted">배송중(SHIPPED)</small><b>${stats.counts.SHIPPED}</b></div>
+      <div class="stat"><small class="muted">배송완료(DELIVERED)</small><b>${stats.counts.DELIVERED}</b></div>
+      <div class="stat"><small class="muted">취소</small><b>${stats.counts.CANCELLED}</b></div>
+      <div class="stat"><small class="muted">반품</small><b>${stats.counts.RETURNED}</b></div>
+      <div class="stat"><small class="muted">환불</small><b>${stats.counts.REFUNDED}</b></div>
+      <div class="stat"><small class="muted">정산 예정금액</small><b>${won(stats.settlementPending)}</b></div>
+      <div class="stat"><small class="muted">정산 완료금액</small><b>${won(stats.settlementDone)}</b></div>
+      <div class="stat"><small class="muted">내 상품 수</small><b>${sellerProducts.filter(p=>p.sellerId===seller.id).length}</b></div>
+    </div>
+    <div class="info-card" style="margin-top:24px">
+      <h3>정산 계산 방식 (예시)</h3>
+      <p>판매가격 100,000원 − REDCORE 수수료(카테고리 기본 ${commissionSettings.default}%) 10,000원 = 판매자 정산금액 90,000원<br>
+      실제 카테고리·판매자별 수수료율은 관리자가 설정하며, 위 수치는 계산 구조를 보여주는 예시입니다. 실제 정산 지급은 결제/은행 연동이 필요합니다.</p>
+    </div>
+  `;
+  const logout = document.querySelector("#seller-logout-link");
+  if(logout) logout.addEventListener("click", e=>{ e.preventDefault(); sellerLogout(); });
+}
+document.addEventListener("DOMContentLoaded", renderSellerDashboard);
+</script>
+</body></html>

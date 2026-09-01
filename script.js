@@ -19,6 +19,199 @@ let orders = safeParse("redcore_orders", []);
 let user = safeParse("redcore_user", null);
 window.__redcoreSelectedSize = "M";
 
+/* =========================================================
+   MARKETPLACE DATA LAYER (Phase 1)
+   ---------------------------------------------------------
+   ⚠️ DEMO ONLY. Everything below is stored in the browser's
+   localStorage, in plain text, with no authentication and no
+   server. This is fine for prototyping UI/flows, but must
+   NEVER be treated as a real seller/admin security model.
+   Real settlement bank details, passwords, and business
+   registration numbers must be collected and stored on a
+   real backend with proper encryption/auth before this goes
+   live. See README.md "마켓플레이스 확장 시 필요한 것" section.
+   ========================================================= */
+
+const CATEGORIES = ["의류","신발","가방","액세서리","라이프스타일","기타"];
+
+let sellerApplications = safeParse("redcore_seller_applications", []);
+let sellers = safeParse("redcore_sellers", []); // approved sellers derived from applications
+let sellerProducts = safeParse("redcore_seller_products", []);
+let commissionSettings = safeParse("redcore_commission_settings", {
+  default: 10,
+  categories: {"의류":10,"신발":10,"가방":10,"액세서리":10,"라이프스타일":10,"기타":10},
+  sellerOverrides: {} // { [sellerId]: rate }
+});
+let commissionLog = safeParse("redcore_commission_log", []);
+let sellerSession = safeParse("redcore_seller_session", null); // {sellerId, businessName}
+
+function saveMarketplace(){
+  localStorage.setItem("redcore_seller_applications", JSON.stringify(sellerApplications));
+  localStorage.setItem("redcore_sellers", JSON.stringify(sellers));
+  localStorage.setItem("redcore_seller_products", JSON.stringify(sellerProducts));
+  localStorage.setItem("redcore_commission_settings", JSON.stringify(commissionSettings));
+  localStorage.setItem("redcore_commission_log", JSON.stringify(commissionLog));
+}
+function saveSellerSession(){ localStorage.setItem("redcore_seller_session", JSON.stringify(sellerSession)); }
+
+function genId(prefix){ return `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,5).toUpperCase()}`; }
+
+/* REDCORE's own 4 products are treated as an "official" seller so
+   the same data model covers both first-party and marketplace items. */
+const OFFICIAL_SELLER_ID = "redcore-official";
+
+/* --- 판매자 입점 신청 (Seller onboarding) --- */
+function submitSellerApplication(data){
+  const app = {
+    id: genId("APP"),
+    businessName: data.businessName,
+    ownerName: data.ownerName,
+    bizRegNo: data.bizRegNo,
+    mailOrderNo: data.mailOrderNo,
+    address: data.address,
+    phone: data.phone,
+    email: data.email,
+    bankName: data.bankName,
+    accountHolder: data.accountHolder,
+    accountNoMasked: maskAccountNo(data.accountNo),
+    username: data.username,
+    status: "PENDING", // PENDING / APPROVED / REJECTED
+    appliedAt: new Date().toISOString(),
+    reviewedAt: null,
+    rejectReason: null
+  };
+  sellerApplications.unshift(app);
+  saveMarketplace();
+  return app;
+}
+function maskAccountNo(v){
+  const digits = String(v||"").replace(/\D/g,"");
+  if(digits.length <= 4) return digits.replace(/./g,"*");
+  return digits.slice(0,-4).replace(/./g,"*") + digits.slice(-4);
+}
+
+/* --- 관리자: 입점 심사 --- */
+function approveSellerApplication(appId){
+  const app = sellerApplications.find(a=>a.id===appId);
+  if(!app) return;
+  app.status="APPROVED"; app.reviewedAt=new Date().toISOString(); app.rejectReason=null;
+  if(!sellers.find(s=>s.id===app.id)){
+    sellers.push({
+      id: app.id, businessName: app.businessName, ownerName: app.ownerName,
+      username: app.username, email: app.email, phone: app.phone,
+      status: "APPROVED", // APPROVED / SUSPENDED
+      appliedAt: app.appliedAt
+    });
+  }
+  saveMarketplace();
+}
+function rejectSellerApplication(appId, reason){
+  const app = sellerApplications.find(a=>a.id===appId);
+  if(!app) return;
+  app.status="REJECTED"; app.reviewedAt=new Date().toISOString(); app.rejectReason=reason||"사유 미입력";
+  saveMarketplace();
+}
+function suspendSeller(sellerId){
+  const s = sellers.find(x=>x.id===sellerId); if(!s) return;
+  s.status = s.status==="SUSPENDED" ? "APPROVED" : "SUSPENDED";
+  saveMarketplace();
+}
+
+/* --- 판매자 로그인 (데모: 서버 인증 없음) --- */
+function sellerLoginAttempt(username){
+  const seller = sellers.find(s=>s.username===username && s.status==="APPROVED");
+  if(seller){ sellerSession={sellerId:seller.id, businessName:seller.businessName}; saveSellerSession(); return {ok:true, seller}; }
+  const pending = sellerApplications.find(a=>a.username===username);
+  if(pending) return {ok:false, reason: pending.status==="PENDING" ? "심사 대기중입니다." : pending.status==="REJECTED" ? `입점이 반려되었습니다. 사유: ${pending.rejectReason||"-"}` : "승인된 판매자를 찾을 수 없습니다."};
+  return {ok:false, reason:"등록된 판매자 아이디가 아닙니다."};
+}
+function sellerLogout(){ sellerSession=null; saveSellerSession(); location.href="seller-login.html"; }
+function currentSeller(){ return sellerSession ? sellers.find(s=>s.id===sellerSession.sellerId) : null; }
+
+/* --- 상품 등록 (판매자) --- */
+function addSellerProduct(data){
+  const seller = currentSeller(); if(!seller) return null;
+  const product = {
+    id: genId("PRD"),
+    sellerId: seller.id,
+    name: data.name,
+    category: data.category,
+    brand: data.brand,
+    price: Number(data.price)||0,
+    salePrice: data.salePrice ? Number(data.salePrice) : null,
+    stock: Number(data.stock)||0,
+    image: data.image || "images/hero.svg",
+    description: data.description,
+    sizeOptions: data.sizeOptions,
+    colorOptions: data.colorOptions,
+    shippingFee: Number(data.shippingFee)||0,
+    freeShipping: !!data.freeShipping,
+    shippingMethod: data.shippingMethod,
+    originAddress: data.originAddress,
+    returnAddress: data.returnAddress,
+    exchangePolicy: data.exchangePolicy,
+    returnPolicy: data.returnPolicy,
+    infoDisclosure: data.infoDisclosure,
+    status: "PENDING_REVIEW", // DRAFT / PENDING_REVIEW / APPROVED / REJECTED / SOLD_OUT / HIDDEN
+    rejectReason: null,
+    createdAt: new Date().toISOString()
+  };
+  sellerProducts.unshift(product);
+  saveMarketplace();
+  return product;
+}
+function approveSellerProduct(id){ const p=sellerProducts.find(x=>x.id===id); if(!p)return; p.status="APPROVED"; p.rejectReason=null; saveMarketplace(); }
+function rejectSellerProduct(id, reason){ const p=sellerProducts.find(x=>x.id===id); if(!p)return; p.status="REJECTED"; p.rejectReason=reason||"사유 미입력"; saveMarketplace(); }
+function hideSellerProduct(id){ const p=sellerProducts.find(x=>x.id===id); if(!p)return; p.status = p.status==="HIDDEN" ? "APPROVED" : "HIDDEN"; saveMarketplace(); }
+
+/* --- 수수료 계산 --- */
+function commissionRateFor(sellerId, category){
+  if(commissionSettings.sellerOverrides && commissionSettings.sellerOverrides[sellerId]!=null) return Number(commissionSettings.sellerOverrides[sellerId]);
+  if(commissionSettings.categories && commissionSettings.categories[category]!=null) return Number(commissionSettings.categories[category]);
+  return Number(commissionSettings.default);
+}
+function calcSettlement(price, qty, sellerId, category){
+  const rate = commissionRateFor(sellerId, category);
+  const gross = price*qty;
+  const fee = Math.round(gross*(rate/100));
+  return { gross, rate, fee, net: gross-fee };
+}
+function updateCommissionSettings(next){
+  commissionSettings = next;
+  commissionLog.unshift({ at:new Date().toISOString(), settings: JSON.parse(JSON.stringify(next)) });
+  saveMarketplace();
+}
+
+/* --- 판매자 통계 (SELLER CENTER 대시보드용) --- */
+function sellerStats(sellerId){
+  const myOrders = orders.filter(o=>Array.isArray(o.items) && o.items.some(i=>i.sellerId===sellerId));
+  const todayStr = new Date().toDateString();
+  const monthKey = d=>{const dt=new Date(d); return `${dt.getFullYear()}-${dt.getMonth()}`;};
+  const thisMonth = monthKey(new Date());
+  let todaySales=0, monthSales=0, settlementPending=0, settlementDone=0;
+  const counts = {PAYMENT_PENDING:0,PAID:0,PREPARING:0,SHIPPED:0,DELIVERED:0,PURCHASE_CONFIRMED:0,CANCELLED:0,RETURNED:0,REFUNDED:0};
+  myOrders.forEach(o=>{
+    (o.items||[]).filter(i=>i.sellerId===sellerId).forEach(i=>{
+      const settle = calcSettlement(i.price, i.quantity, sellerId, i.category);
+      const created = new Date(o.createdAt||Date.now());
+      if(created.toDateString()===todayStr) todaySales += settle.gross;
+      if(monthKey(o.createdAt)===thisMonth) monthSales += settle.gross;
+      if(o.status==="PURCHASE_CONFIRMED") settlementDone += settle.net; else settlementPending += settle.net;
+    });
+    if(counts[o.status]!=null) counts[o.status]++;
+  });
+  return { orderCount: myOrders.length, todaySales, monthSales, settlementPending, settlementDone, counts };
+}
+
+/* --- 마켓플레이스 상품 통합 조회 (공식 4개 + 승인된 입점 상품) --- */
+function marketplaceProducts(){
+  const officialCategory = {tee:"의류", hoodie:"의류", pants:"의류", cap:"액세서리"};
+  const official = PRODUCTS.map(p=>({...p, sellerId:OFFICIAL_SELLER_ID, sellerName:"REDCORE", category:officialCategory[p.id]||"기타", status:"APPROVED"}));
+  const thirdParty = sellerProducts.filter(p=>p.status==="APPROVED").map(p=>({...p, sellerName:(sellers.find(s=>s.id===p.sellerId)||{}).businessName||"판매자"}));
+  return official.concat(thirdParty);
+}
+
+
 function safeParse(key, fallback){
   try{
     const raw = localStorage.getItem(key);
@@ -100,7 +293,7 @@ function bindForms(){
   if(!customer.name||!customer.address)return toast("주문자 정보를 확인해주세요.");
   if(!/^01[0-9]-?\d{3,4}-?\d{4}$/.test(customer.phone.replace(/\s/g,"")))return toast("휴대폰 번호를 확인해주세요.");
 
-  const items=cart.map(i=>{const p=findProduct(i.id);return {productId:i.id,name:p?p.name:i.id,size:i.size||"M",quantity:Number(i.qty),price:Number(p?p.price:0)}});
+  const items=cart.map(i=>{const p=findProduct(i.id);const officialCategory={tee:"의류",hoodie:"의류",pants:"의류",cap:"액세서리"};return {productId:i.id,name:p?p.name:i.id,size:i.size||"M",quantity:Number(i.qty),price:Number(p?p.price:0),sellerId:OFFICIAL_SELLER_ID,category:officialCategory[i.id]||"기타"}});
   const btn=order.querySelector("button[type=submit], button:not([type])");
   if(btn){btn.disabled=true;btn.textContent="PROCESSING...";}
 

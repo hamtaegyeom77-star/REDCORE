@@ -7,18 +7,64 @@
 </header>
 <main class="page"><div class="container">
 <div class="kicker">REDCORE / ADMIN</div>
-<h1 class="page-title">ORDERS</h1>
-<div class="info-card" style="max-width:640px;margin-bottom:30px">
-  <p>이 페이지는 정적 사이트(GitHub Pages) 환경에 맞춘 데모 관리자 화면입니다. 서버가 없기 때문에 <b>이 브라우저에 저장된 주문만</b> 보여줍니다. 여러 기기·고객의 주문을 한 곳에서 모아 관리하려면 실제 서버(및 로그인 인증)가 필요하며, <code>/optional-backend-reference</code> 폴더의 스타터 API를 참고해 연결할 수 있습니다.</p>
+<h1 class="page-title">ADMIN CENTER</h1>
+<div class="info-card" style="max-width:720px;margin-bottom:30px">
+  <p>이 페이지는 정적 사이트(GitHub Pages) 환경에 맞춘 <b>데모 관리자 화면</b>입니다. 로그인 인증이 없고, 서버가 아닌 <b>이 브라우저에 저장된 데이터만</b> 보여줍니다. 실서비스 관리자 기능으로 사용하기 전에는 반드시 서버 기반 관리자 인증(로그인, 권한 분리, 접근 로그)이 필요합니다.</p>
 </div>
-<div id="admin-orders"><div class="empty">불러오는 중...</div></div>
+
+<div class="filters" style="margin-bottom:24px" role="tablist">
+  <button class="filter active" data-tab="orders" type="button">주문관리</button>
+  <button class="filter" data-tab="sellers" type="button">판매자관리 / 입점심사</button>
+  <button class="filter" data-tab="products" type="button">상품검수</button>
+  <button class="filter" data-tab="commission" type="button">수수료관리</button>
+</div>
+
+<section id="tab-orders" class="admin-tab">
+  <div id="admin-orders"><div class="empty">불러오는 중...</div></div>
+</section>
+
+<section id="tab-sellers" class="admin-tab" style="display:none">
+  <h3 style="font-size:14px;margin-bottom:14px">입점 심사 대기</h3>
+  <div id="admin-applications"></div>
+  <h3 style="font-size:14px;margin:34px 0 14px">승인된 판매자</h3>
+  <div id="admin-sellers"></div>
+</section>
+
+<section id="tab-products" class="admin-tab" style="display:none">
+  <h3 style="font-size:14px;margin-bottom:14px">판매자 등록 상품 검수</h3>
+  <div id="admin-products"></div>
+</section>
+
+<section id="tab-commission" class="admin-tab" style="display:none">
+  <h3 style="font-size:14px;margin-bottom:14px">수수료 설정</h3>
+  <div class="legal-notice" style="margin-bottom:20px">현재 REDCORE의 확정된 법적 수수료율은 없습니다. 아래 수치는 관리자가 자유롭게 변경할 수 있는 예시 설정입니다.</div>
+  <form id="commission-form" class="form-card" style="padding:28px;max-width:520px">
+    <div class="field"><label>기본 수수료율(%)</label><input name="default" type="number" min="0" max="100" step="0.1" required></div>
+    <div id="category-rate-fields"></div>
+    <button class="btn wide" style="margin-top:8px">수수료율 저장</button>
+  </form>
+  <div id="commission-log" style="margin-top:24px"></div>
+</section>
+
 </div></main>
 <div class="toast"></div>
-<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="notice.html">NOTICE</a><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
+<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="seller-signup.html">SELLER CENTER</a><a href="notice.html">NOTICE</a><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
 <script src="script.js"></script>
 <script>
-const STATUSES=["PAYMENT_PENDING","PAID","PREPARING","SHIPPED","DELIVERED","CANCELLED"];
+const STATUSES=["PAYMENT_PENDING","PAID","PREPARING","SHIPPED","DELIVERED","PURCHASE_CONFIRMED","CANCEL_REQUESTED","CANCELLED","RETURN_REQUESTED","RETURNED","REFUND_REQUESTED","REFUNDED"];
 function escapeHtml(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
+
+/* ---- tabs ---- */
+document.querySelectorAll(".filter[data-tab]").forEach(btn=>{
+  btn.addEventListener("click", ()=>{
+    document.querySelectorAll(".filter[data-tab]").forEach(b=>b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".admin-tab").forEach(s=>s.style.display="none");
+    document.querySelector("#tab-"+btn.dataset.tab).style.display="";
+  });
+});
+
+/* ---- orders ---- */
 function renderAdminOrders(){
   const el=document.querySelector("#admin-orders");
   const list=Array.isArray(orders)?orders:[];
@@ -48,6 +94,82 @@ function updateStatus(select){
   save();
   toast("주문 상태가 변경되었습니다.");
 }
-document.addEventListener("DOMContentLoaded",renderAdminOrders);
+
+/* ---- sellers: applications + approved list ---- */
+function renderAdminSellers(){
+  const appsEl=document.querySelector("#admin-applications");
+  const pending = sellerApplications.filter(a=>a.status==="PENDING");
+  appsEl.innerHTML = pending.length ? pending.map(a=>`
+    <div class="notice-row" style="display:block;padding:16px 0;border-bottom:1px solid var(--line)">
+      <b>${escapeHtml(a.businessName)}</b> <span class="muted">(${escapeHtml(a.ownerName)})</span><br>
+      <span class="muted">사업자등록번호 ${escapeHtml(a.bizRegNo)} · ${escapeHtml(a.phone)} · ${escapeHtml(a.email)}</span><br>
+      <span class="muted">정산계좌: ${escapeHtml(a.bankName)} ${escapeHtml(a.accountNoMasked)} (${escapeHtml(a.accountHolder)})</span><br>
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <button class="btn" type="button" data-approve="${escapeHtml(a.id)}">승인</button>
+        <button class="btn outline" type="button" data-reject="${escapeHtml(a.id)}">반려</button>
+      </div>
+    </div>
+  `).join("") : `<div class="empty">심사 대기중인 신청이 없습니다.</div>`;
+
+  appsEl.querySelectorAll("[data-approve]").forEach(b=>b.addEventListener("click",()=>{approveSellerApplication(b.dataset.approve);toast("판매자를 승인했습니다.");renderAdminSellers();renderCommissionTab();}));
+  appsEl.querySelectorAll("[data-reject]").forEach(b=>b.addEventListener("click",()=>{const reason=prompt("반려 사유를 입력해주세요.")||"";rejectSellerApplication(b.dataset.reject,reason);toast("입점 신청을 반려했습니다.");renderAdminSellers();}));
+
+  const sellersEl=document.querySelector("#admin-sellers");
+  sellersEl.innerHTML = sellers.length ? sellers.map(s=>`
+    <div class="notice-row" style="display:block;padding:16px 0;border-bottom:1px solid var(--line)">
+      <b>${escapeHtml(s.businessName)}</b> <span class="muted">· ${escapeHtml(s.username)} · 상태 ${escapeHtml(s.status)}</span>
+      <div style="margin-top:10px"><button class="btn outline" type="button" data-suspend="${escapeHtml(s.id)}">${s.status==="SUSPENDED"?"정지 해제":"판매 정지"}</button></div>
+    </div>
+  `).join("") : `<div class="empty">승인된 판매자가 없습니다.</div>`;
+  sellersEl.querySelectorAll("[data-suspend]").forEach(b=>b.addEventListener("click",()=>{suspendSeller(b.dataset.suspend);toast("판매자 상태를 변경했습니다.");renderAdminSellers();}));
+}
+
+/* ---- product review ---- */
+function renderAdminProducts(){
+  const el=document.querySelector("#admin-products");
+  const pending = sellerProducts.filter(p=>p.status==="PENDING_REVIEW");
+  const others = sellerProducts.filter(p=>p.status!=="PENDING_REVIEW");
+  const won=n=>Number(n||0).toLocaleString("ko-KR")+"원";
+  const row=(p,actions)=>`
+    <div class="notice-row" style="display:block;padding:16px 0;border-bottom:1px solid var(--line)">
+      <b>${escapeHtml(p.name)}</b> <span class="muted">(${escapeHtml(p.category)}) · ${escapeHtml((sellers.find(s=>s.id===p.sellerId)||{}).businessName||p.sellerId)}</span><br>
+      <span>${won(p.salePrice||p.price)} · 재고 ${p.stock}</span><br>
+      <span class="muted">상태: ${escapeHtml(p.status)}${p.rejectReason?` — ${escapeHtml(p.rejectReason)}`:""}</span>
+      ${actions?`<div style="display:flex;gap:8px;margin-top:10px">${actions}</div>`:""}
+    </div>`;
+  el.innerHTML =
+    (pending.length ? pending.map(p=>row(p, `<button class="btn" type="button" data-approve-p="${escapeHtml(p.id)}">승인</button><button class="btn outline" type="button" data-reject-p="${escapeHtml(p.id)}">반려</button>`)).join("") : `<div class="empty">검수 대기 상품이 없습니다.</div>`)
+    + (others.length ? `<h3 style="font-size:12px;color:var(--muted);margin:24px 0 10px">기타 상품</h3>` + others.map(p=>row(p, `<button class="btn outline" type="button" data-hide-p="${escapeHtml(p.id)}">${p.status==="HIDDEN"?"숨김 해제":"숨김"}</button>`)).join("") : "");
+
+  el.querySelectorAll("[data-approve-p]").forEach(b=>b.addEventListener("click",()=>{approveSellerProduct(b.dataset.approveP);toast("상품을 승인했습니다.");renderAdminProducts();}));
+  el.querySelectorAll("[data-reject-p]").forEach(b=>b.addEventListener("click",()=>{const reason=prompt("반려 사유를 입력해주세요.")||"";rejectSellerProduct(b.dataset.rejectP,reason);toast("상품을 반려했습니다.");renderAdminProducts();}));
+  el.querySelectorAll("[data-hide-p]").forEach(b=>b.addEventListener("click",()=>{hideSellerProduct(b.dataset.hideP);toast("상품 노출 상태를 변경했습니다.");renderAdminProducts();}));
+}
+
+/* ---- commission settings ---- */
+function renderCommissionTab(){
+  const fieldsEl=document.querySelector("#category-rate-fields");
+  fieldsEl.innerHTML = CATEGORIES.map(c=>`<div class="field"><label>${escapeHtml(c)} 카테고리 수수료율(%)</label><input name="cat_${escapeHtml(c)}" type="number" min="0" max="100" step="0.1" value="${commissionSettings.categories[c]!=null?commissionSettings.categories[c]:commissionSettings.default}"></div>`).join("");
+  document.querySelector("#commission-form input[name=default]").value = commissionSettings.default;
+
+  const logEl=document.querySelector("#commission-log");
+  logEl.innerHTML = commissionLog.length ? `<h3 style="font-size:12px;color:var(--muted);margin-bottom:10px">변경 기록</h3>` + commissionLog.slice(0,10).map(l=>`<div class="notice-row"><span>${new Date(l.at).toLocaleString("ko-KR")}</span><span class="muted">기본 ${l.settings.default}%</span></div>`).join("") : "";
+}
+document.querySelector("#commission-form").addEventListener("submit", e=>{
+  e.preventDefault();
+  const fd = new FormData(e.target);
+  const next = { default: Number(fd.get("default")), categories:{}, sellerOverrides: commissionSettings.sellerOverrides||{} };
+  CATEGORIES.forEach(c=>{ next.categories[c] = Number(fd.get("cat_"+c)); });
+  updateCommissionSettings(next);
+  toast("수수료율이 저장되었습니다.");
+  renderCommissionTab();
+});
+
+document.addEventListener("DOMContentLoaded",()=>{
+  renderAdminOrders();
+  renderAdminSellers();
+  renderAdminProducts();
+  renderCommissionTab();
+});
 </script>
 </body></html>

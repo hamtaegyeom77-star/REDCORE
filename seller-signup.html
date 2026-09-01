@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SELLER CENTER — 입점 신청 — REDCORE</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar">FREE SHIPPING ON ALL ORDERS OVER ₩50,000 · 2026 SPRING DROP NOW AVAILABLE</div>
+<header class="header">
+<a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a>
+<nav class="nav"><a href="index.html">HOME</a><a href="shop.html">SHOP</a><a href="story.html">ABOUT</a><a href="customer.html">CUSTOMER</a></nav>
+<div class="actions"><a href="wishlist.html" aria-label="위시리스트">♡</a><a class="cart-link" href="cart.html" aria-label="장바구니">CART <span class="count">0</span></a><a href="mypage.html" aria-label="마이페이지">MY</a><button class="menu-btn" type="button" aria-label="메뉴 열기" aria-expanded="false">☰</button></div>
+</header>
+<main class="page"><div class="container" style="max-width:640px">
+<div class="kicker">SELLER CENTER</div>
+<h1 class="page-title">입점 신청</h1>
+<p class="page-sub">REDCORE 마켓플레이스에 입점하여 상품을 판매해보세요. 신청 후 관리자 심사를 거쳐 승인되면 SELLER CENTER를 이용할 수 있습니다.</p>
+
+<div class="legal-notice" style="margin:24px 0">
+<b>안내.</b> 이 사이트는 현재 데모용 정적 페이지로, 아래 입력한 정보(계좌번호 포함)는 실제 서버가 아닌 <b>이용자의 브라우저에만</b> 저장됩니다. 계좌번호는 화면 표시용으로 마스킹 처리되지만, 실제 서비스 오픈 전에는 반드시 서버·암호화·본인인증 등 실제 보안 체계를 갖춘 뒤 정식으로 수집해야 합니다.
+</div>
+
+<form id="seller-signup-form" class="form-card" style="padding:32px">
+<h3 style="font-size:12px;letter-spacing:1px;color:var(--muted);margin-bottom:14px">사업자 정보</h3>
+<div class="field"><label>판매자 유형</label><select name="sellerType"><option value="개인사업자">개인사업자</option><option value="법인사업자">법인사업자</option><option value="개인(간이과세자)">개인(간이과세자)</option></select></div>
+<div class="field"><label>사업자명(상호)</label><input name="businessName" required></div>
+<div class="field"><label>대표자명</label><input name="ownerName" required></div>
+<div class="field"><label>사업자등록번호</label><input name="bizRegNo" placeholder="000-00-00000" required></div>
+<div class="field"><label>통신판매업 신고번호</label><input name="mailOrderNo" placeholder="제0000-서울강남-00000 (없으면 공란)"></div>
+<div class="field"><label>사업장 주소</label><input name="address" required></div>
+<div class="field"><label>연락처</label><input name="phone" placeholder="010-0000-0000" required></div>
+<div class="field"><label>이메일</label><input name="email" type="email" required></div>
+
+<h3 style="font-size:12px;letter-spacing:1px;color:var(--muted);margin:26px 0 14px">정산 계좌 정보</h3>
+<div class="field"><label>은행</label><input name="bankName" required></div>
+<div class="field"><label>예금주</label><input name="accountHolder" required></div>
+<div class="field"><label>계좌번호</label><input name="accountNo" inputmode="numeric" required></div>
+
+<h3 style="font-size:12px;letter-spacing:1px;color:var(--muted);margin:26px 0 14px">SELLER CENTER 계정</h3>
+<div class="field"><label>아이디</label><input name="username" required></div>
+<div class="field"><label>비밀번호</label><input name="password" type="password" required></div>
+
+<button class="btn wide" style="margin-top:8px">입점 신청하기</button>
+<p class="form-help">이미 승인된 판매자이신가요? <a href="seller-login.html"><b>SELLER CENTER 로그인</b></a></p>
+</form>
+
+</div></main>
+<div class="toast"></div>
+<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="seller-signup.html">SELLER CENTER</a><a href="notice.html">NOTICE</a><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
+<script src="script.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", ()=>{
+  const form = document.querySelector("#seller-signup-form");
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    if(sellerApplications.some(a=>a.username===fd.get("username"))){
+      toast("이미 사용 중인 아이디입니다.");
+      return;
+    }
+    submitSellerApplication({
+      businessName: fd.get("businessName"), ownerName: fd.get("ownerName"),
+      bizRegNo: fd.get("bizRegNo"), mailOrderNo: fd.get("mailOrderNo"),
+      address: fd.get("address"), phone: fd.get("phone"), email: fd.get("email"),
+      bankName: fd.get("bankName"), accountHolder: fd.get("accountHolder"), accountNo: fd.get("accountNo"),
+      username: fd.get("username")
+    });
+    toast("입점 신청이 접수되었습니다. 관리자 승인을 기다려주세요.");
+    setTimeout(()=>location.href="seller-login.html", 900);
+  });
+});
+</script>
+</body></html>

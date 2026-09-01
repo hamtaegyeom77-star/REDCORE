@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="ko"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>SELLER CENTER — 상품 관리 — REDCORE</title><link rel="stylesheet" href="style.css"></head><body>
+<div class="topbar">FREE SHIPPING ON ALL ORDERS OVER ₩50,000 · 2026 SPRING DROP NOW AVAILABLE</div>
+<header class="header">
+<a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a>
+<nav class="nav"><a href="index.html">HOME</a><a href="shop.html">SHOP</a><a href="story.html">ABOUT</a><a href="customer.html">CUSTOMER</a></nav>
+<div class="actions"><a href="wishlist.html" aria-label="위시리스트">♡</a><a class="cart-link" href="cart.html" aria-label="장바구니">CART <span class="count">0</span></a><a href="mypage.html" aria-label="마이페이지">MY</a><button class="menu-btn" type="button" aria-label="메뉴 열기" aria-expanded="false">☰</button></div>
+</header>
+<main class="page"><div class="container">
+<div class="kicker">SELLER CENTER</div><h1 class="page-title">상품 등록 / 관리</h1>
+<div class="mypage-grid">
+<aside class="side-nav">
+<a href="seller-dashboard.html">DASHBOARD</a>
+<a href="seller-products.html">상품 등록/관리</a>
+<a href="#" id="seller-logout-link">로그아웃</a>
+</aside>
+<section id="seller-products-root"><div class="empty">불러오는 중...</div></section>
+</div>
+</div></main>
+<div class="toast"></div>
+<footer class="footer"><div class="footer-inner"><div><a class="logo" href="index.html" aria-label="REDCORE HOME"><span class="logo-red">RED</span><span class="logo-core">CORE</span></a><br><small>WEAR YOUR IDENTITY.</small></div><div class="footer-links"><a href="seller-signup.html">SELLER CENTER</a><a href="notice.html">NOTICE</a><a href="terms.html">TERMS</a><a href="privacy.html">PRIVACY</a><a href="contact.html">CONTACT</a></div><small>© 2026 REDCORE. ALL RIGHTS RESERVED.</small></div></footer>
+<script src="script.js"></script>
+<script>
+function escapeHtml(v){return String(v??"").replace(/[&<>'"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","'":"&#39;",'"':"&quot;"}[c]))}
+const STATUS_LABEL = {DRAFT:"임시저장",PENDING_REVIEW:"검수 대기",APPROVED:"판매중",REJECTED:"반려",SOLD_OUT:"품절",HIDDEN:"숨김"};
+
+function renderSellerProducts(){
+  const root = document.querySelector("#seller-products-root");
+  const seller = currentSeller();
+  if(!seller){
+    root.innerHTML = `<div class="empty"><p>로그인이 필요합니다.</p><a class="btn" href="seller-login.html" style="margin-top:20px">SELLER LOGIN</a></div>`;
+    return;
+  }
+  const mine = sellerProducts.filter(p=>p.sellerId===seller.id);
+  const won = n => Number(n||0).toLocaleString("ko-KR")+"원";
+
+  root.innerHTML = `
+  <form id="seller-product-form" class="form-card" style="padding:32px;margin-bottom:30px">
+    <h3 style="font-size:12px;letter-spacing:1px;color:var(--muted);margin-bottom:14px">새 상품 등록</h3>
+    <div class="field"><label>상품명</label><input name="name" required></div>
+    <div class="field"><label>카테고리</label><select name="category">${CATEGORIES.map(c=>`<option value="${c}">${c}</option>`).join("")}</select></div>
+    <div class="field"><label>브랜드</label><input name="brand" placeholder="예: REDCORE, 자체 브랜드명 등"></div>
+    <div class="field"><label>판매가격(원)</label><input name="price" type="number" min="0" required></div>
+    <div class="field"><label>할인가(원, 선택)</label><input name="salePrice" type="number" min="0"></div>
+    <div class="field"><label>재고수량</label><input name="stock" type="number" min="0" required></div>
+    <div class="field"><label>상품 이미지 URL (선택, 비워두면 기본 이미지)</label><input name="image" placeholder="images/hero.svg 등"></div>
+    <div class="field"><label>상세 설명</label><textarea name="description"></textarea></div>
+    <div class="field"><label>사이즈 옵션</label><input name="sizeOptions" placeholder="예: S,M,L,XL"></div>
+    <div class="field"><label>색상 옵션</label><input name="colorOptions" placeholder="예: 블랙,화이트"></div>
+    <div class="field"><label>배송비(원)</label><input name="shippingFee" type="number" min="0" value="3000"></div>
+    <div class="field"><label><input type="checkbox" name="freeShipping" style="width:auto;height:auto;display:inline-block;margin-right:6px">무료배송 여부</label></div>
+    <div class="field"><label>배송 방법</label><input name="shippingMethod" placeholder="예: 택배, 퀵배송 등"></div>
+    <div class="field"><label>출고지</label><input name="originAddress"></div>
+    <div class="field"><label>반품 주소</label><input name="returnAddress"></div>
+    <div class="field"><label>교환 정책</label><textarea name="exchangePolicy"></textarea></div>
+    <div class="field"><label>반품 정책</label><textarea name="returnPolicy"></textarea></div>
+    <div class="field"><label>상품정보제공고시</label><textarea name="infoDisclosure" placeholder="품명, 소재, 제조자, 제조국, 세탁방법 등"></textarea></div>
+    <button class="btn wide" style="margin-top:8px">상품 등록 신청 (검수 대기로 등록)</button>
+    <p class="form-help">등록한 상품은 관리자 검수 후 "판매중" 상태가 되어야 SHOP에 노출됩니다.</p>
+  </form>
+
+  <h3 style="font-size:14px;margin-bottom:14px">내 상품 목록 (${mine.length})</h3>
+  <div id="seller-product-list">
+  ${mine.length ? mine.map(p=>`
+    <div class="notice-row" style="display:block;padding:16px 0;border-bottom:1px solid var(--line)">
+      <b>${escapeHtml(p.name)}</b> <span class="muted">(${escapeHtml(p.category)})</span><br>
+      <span>${won(p.salePrice||p.price)} ${p.salePrice?`<s class="muted">${won(p.price)}</s>`:""} · 재고 ${p.stock}</span><br>
+      <span class="muted">상태: <b>${STATUS_LABEL[p.status]||p.status}</b>${p.status==="REJECTED"&&p.rejectReason?` — ${escapeHtml(p.rejectReason)}`:""}</span>
+    </div>
+  `).join("") : `<div class="empty">등록한 상품이 없습니다.</div>`}
+  </div>
+  `;
+
+  const form = document.querySelector("#seller-product-form");
+  form.addEventListener("submit", e=>{
+    e.preventDefault();
+    const fd = new FormData(form);
+    addSellerProduct({
+      name: fd.get("name"), category: fd.get("category"), brand: fd.get("brand"),
+      price: fd.get("price"), salePrice: fd.get("salePrice"), stock: fd.get("stock"),
+      image: fd.get("image"), description: fd.get("description"),
+      sizeOptions: fd.get("sizeOptions"), colorOptions: fd.get("colorOptions"),
+      shippingFee: fd.get("shippingFee"), freeShipping: fd.get("freeShipping")==="on",
+      shippingMethod: fd.get("shippingMethod"), originAddress: fd.get("originAddress"),
+      returnAddress: fd.get("returnAddress"), exchangePolicy: fd.get("exchangePolicy"),
+      returnPolicy: fd.get("returnPolicy"), infoDisclosure: fd.get("infoDisclosure")
+    });
+    toast("상품이 등록되었습니다. 관리자 검수 후 노출됩니다.");
+    renderSellerProducts();
+  });
+
+  const logout = document.querySelector("#seller-logout-link");
+  if(logout) logout.addEventListener("click", e=>{ e.preventDefault(); sellerLogout(); });
+}
+document.addEventListener("DOMContentLoaded", renderSellerProducts);
+</script>
+</body></html>
