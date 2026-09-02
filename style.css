@@ -26,6 +26,11 @@ img{max-width:100%;display:block}
 .hero h1 em{font-family:Georgia,serif;font-weight:400;letter-spacing:-5px}
 .hero p{font-size:13px;color:#696460;max-width:390px;margin:30px 0 26px}
 .btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--ink);background:var(--ink);color:#fff;padding:13px 22px;font-size:10px;font-weight:800;letter-spacing:1.4px;transition:.2s;width:max-content}
+.btn:disabled{background:#c9c5c2;border-color:#c9c5c2;color:#fff;cursor:not-allowed;opacity:.8}
+.btn:disabled:hover{transform:none}
+.product-card.sold-out img{opacity:.45}
+.sold-out-badge{position:absolute;left:0;right:0;top:50%;transform:translateY(-50%);text-align:center;font-size:11px;font-weight:800;letter-spacing:2px;color:#fff;background:rgba(23,25,24,.82);padding:8px 0}
+.product-card .pic{position:relative}
 .btn:hover{background:transparent;color:var(--ink)}.btn.light{background:#fff;color:var(--ink);border-color:#fff}.btn.outline{background:transparent;color:var(--ink)}
 .hero-visual{background:#e8e2df;display:flex;align-items:center;justify-content:center;overflow:hidden}.hero-visual img{width:100%;height:100%;object-fit:cover}
 .section{padding:88px 0}.section-head{display:flex;justify-content:space-between;align-items:end;margin-bottom:28px}.section-title{font-size:26px;letter-spacing:-1.5px}.section-note{font-size:10px;color:var(--muted);letter-spacing:1px}
@@ -58,6 +63,13 @@ img{max-width:100%;display:block}
 .legal-doc ol,.legal-doc ul{padding-left:20px;margin:8px 0 14px}
 .legal-doc li{font-size:12.5px;color:#5c5652;line-height:1.95;margin-bottom:6px}
 .legal-doc table{width:100%;border-collapse:collapse;margin:14px 0 18px;font-size:11.5px}
+.data-table{width:100%;border-collapse:collapse;margin:14px 0 24px;font-size:11.5px}
+.data-table th,.data-table td{border:1px solid var(--line);padding:10px 12px;text-align:left;color:#5c5652;line-height:1.6;vertical-align:middle}
+.data-table th{background:#f4f1ef;font-weight:800;color:var(--ink);font-size:10.5px;letter-spacing:.3px}
+.data-table input[type=number],.data-table input[type=text]{width:100%;min-width:80px;padding:7px 8px;border:1px solid var(--line);font-size:11.5px}
+.data-table .num{text-align:right;font-variant-numeric:tabular-nums}
+.data-table tr.unknown-cost{background:#fbf4ec}
+@media(max-width:760px){.data-table{display:block;overflow-x:auto;white-space:nowrap}}
 .legal-doc th,.legal-doc td{border:1px solid var(--line);padding:11px 13px;text-align:left;color:#5c5652;line-height:1.7}
 .legal-doc th{background:#f4f1ef;font-weight:800;color:var(--ink)}
 .legal-doc .fill{font-weight:700}

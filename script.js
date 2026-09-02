@@ -54,6 +54,97 @@ function saveMarketplace(){
 }
 function saveSellerSession(){ localStorage.setItem("redcore_seller_session", JSON.stringify(sellerSession)); }
 
+/* =========================================================
+   INTERNAL PRODUCT MANAGEMENT (admin only)
+   ---------------------------------------------------------
+   REDCORE's actual business model: the admin (site owner)
+   receives inventory from a supplier ("삼촌") and lists it for
+   sale directly — this is NOT a self-service seller marketplace.
+   Supply cost (공급가) and margin are admin-only figures and are
+   NEVER included in any customer-facing render function below.
+   ========================================================= */
+let adminProducts = safeParse("redcore_admin_products", []); // products added by the admin beyond the original 4
+let productCosts = safeParse("redcore_product_costs", {});   // { [productId]: 공급가(supply cost) } — admin-only
+let productStock = safeParse("redcore_product_stock", {});   // { [productId]: 재고수량 } — null/unset = unlimited
+
+function saveInventory(){
+  localStorage.setItem("redcore_admin_products", JSON.stringify(adminProducts));
+  localStorage.setItem("redcore_product_costs", JSON.stringify(productCosts));
+  localStorage.setItem("redcore_product_stock", JSON.stringify(productStock));
+}
+
+function addAdminProduct(data){
+  const product = {
+    id: genId("PRD"),
+    name: data.name,
+    category: data.category || "기타",
+    price: Number(data.price)||0,
+    image: data.image || "images/hero.svg",
+    description: data.description || "",
+    visible: true,
+    createdAt: new Date().toISOString()
+  };
+  adminProducts.push(product);
+  productCosts[product.id] = Number(data.costPrice)||0;
+  productStock[product.id] = data.stock!==undefined && data.stock!=="" ? Number(data.stock) : null;
+  saveInventory();
+  return product;
+}
+function deleteAdminProduct(id){
+  adminProducts = adminProducts.filter(p=>p.id!==id);
+  delete productCosts[id]; delete productStock[id];
+  saveInventory();
+}
+function toggleAdminProductVisible(id){
+  const p = adminProducts.find(x=>x.id===id); if(!p) return;
+  p.visible = !p.visible;
+  saveInventory();
+}
+function updateProductCost(productId, cost){ productCosts[productId] = Number(cost)||0; saveInventory(); }
+function updateProductStock(productId, qty){ productStock[productId] = (qty===""||qty==null) ? null : Number(qty); saveInventory(); }
+
+/* All products a customer can currently see (original 4 + visible admin-added items). */
+function catalogProducts(){
+  return PRODUCTS.concat(adminProducts.filter(p=>p.visible!==false));
+}
+/* Every product that exists in the system, for admin management (includes hidden). */
+function allProductsForAdmin(){
+  return PRODUCTS.concat(adminProducts);
+}
+function stockFor(productId){
+  return productStock[productId]!=null ? Number(productStock[productId]) : null; // null = unlimited/not tracked
+}
+function decrementStock(productId, qty){
+  const s = stockFor(productId);
+  if(s!=null){ productStock[productId] = Math.max(0, s-Number(qty||0)); saveInventory(); }
+}
+function costFor(productId){ return productCosts[productId]!=null ? Number(productCosts[productId]) : null; }
+
+/* 상품별/전체 판매 데이터: 매출, 원가, 예상이익, 판매량 — 실제 orders 데이터로 계산 (하드코딩 없음) */
+function salesAnalytics(){
+  const byProduct = {}; // id -> {name, qty, revenue, cost, costKnown}
+  orders.forEach(o=>{
+    (o.items||[]).forEach(i=>{
+      const pid = i.productId; if(!pid) return;
+      if(!byProduct[pid]) byProduct[pid] = { id:pid, name:i.name, qty:0, revenue:0, cost:0, costKnown:true };
+      const row = byProduct[pid];
+      row.qty += Number(i.quantity)||0;
+      row.revenue += (Number(i.price)||0) * (Number(i.quantity)||0);
+      const c = costFor(pid);
+      if(c==null){ row.costKnown = false; }
+      else { row.cost += c * (Number(i.quantity)||0); }
+    });
+  });
+  const rows = Object.values(byProduct).map(r=>({...r, profit: r.costKnown ? r.revenue - r.cost : null}));
+  const totals = rows.reduce((acc,r)=>{
+    acc.qty += r.qty; acc.revenue += r.revenue;
+    if(r.costKnown){ acc.cost += r.cost; acc.knownProfit += r.profit; } else { acc.hasUnknownCost = true; }
+    return acc;
+  }, {qty:0, revenue:0, cost:0, knownProfit:0, hasUnknownCost:false});
+  return { rows, totals };
+}
+
+
 function genId(prefix){ return `${prefix}-${Date.now().toString(36).toUpperCase()}-${Math.random().toString(36).slice(2,5).toUpperCase()}`; }
 
 /* REDCORE's own 4 products are treated as an "official" seller so
@@ -222,7 +313,7 @@ function safeParse(key, fallback){
 }
 
 const won = n => Number(n||0).toLocaleString("ko-KR")+"원";
-const findProduct = id => PRODUCTS.find(p=>p.id===id);
+const findProduct = id => PRODUCTS.find(p=>p.id===id) || adminProducts.find(p=>p.id===id && p.visible!==false);
 
 function save(){
   localStorage.setItem("redcore_cart",JSON.stringify(cart));
@@ -235,6 +326,8 @@ function toast(msg){ let t=document.querySelector(".toast"); if(!t)return; t.tex
 
 function addToCart(id,size=window.__redcoreSelectedSize||"M"){
  const p=findProduct(id); if(!p)return;
+ const stock=stockFor(id);
+ if(stock===0){ toast("품절된 상품입니다."); return; }
  const item=cart.find(i=>i.id===id&&i.size===size);
  if(item)item.qty++; else cart.push({id,qty:1,size});
  save(); toast(`${p.name} / ${size} 사이즈가 장바구니에 추가되었습니다.`);
@@ -249,15 +342,20 @@ function removeItem(id,size){cart=cart.filter(i=>!(i.id===id&&i.size===size));sa
 
 function productCard(p){
   const liked=wishlist.includes(p.id);
-  return `<article class="product-card"><button class="heart" type="button" aria-label="${p.name} 찜하기" onclick="toggleWish('${p.id}')">${liked?"♥":"♡"}</button><a href="product.html?id=${p.id}"><div class="pic"><img src="${p.image}" alt="${p.name}" loading="lazy"></div></a><div class="product-meta"><a href="product.html?id=${p.id}"><h3>${p.name}</h3></a><p>${won(p.price)}</p></div></article>`;
+  const stock=stockFor(p.id);
+  const soldOut = stock===0;
+  return `<article class="product-card${soldOut?" sold-out":""}"><button class="heart" type="button" aria-label="${p.name} 찜하기" onclick="toggleWish('${p.id}')">${liked?"♥":"♡"}</button><a href="product.html?id=${p.id}"><div class="pic"><img src="${p.image}" alt="${p.name}" loading="lazy">${soldOut?'<span class="sold-out-badge">SOLD OUT</span>':""}</div></a><div class="product-meta"><a href="product.html?id=${p.id}"><h3>${p.name}</h3></a><p>${won(p.price)}</p></div></article>`;
 }
-function renderHome(){const el=document.querySelector("#home-products");if(el)el.innerHTML=PRODUCTS.slice(0,4).map(productCard).join("");}
-function renderShop(){const el=document.querySelector("#shop-products");if(el)el.innerHTML=PRODUCTS.map(productCard).join("");}
+function renderHome(){const el=document.querySelector("#home-products");if(el)el.innerHTML=catalogProducts().slice(0,4).map(productCard).join("");}
+function renderShop(){const el=document.querySelector("#shop-products");if(el)el.innerHTML=catalogProducts().map(productCard).join("");}
 
 function renderProduct(){
  const el=document.querySelector("#product-root");if(!el)return;
  const id=new URLSearchParams(location.search).get("id")||"tee",p=findProduct(id)||PRODUCTS[0],liked=wishlist.includes(p.id);
- el.innerHTML=`<div class="detail"><div class="detail-media"><div class="detail-image"><img id="product-main-image" src="${p.image}" alt="${p.name} 제품 이미지"></div></div><div class="detail-info"><div class="eyebrow">REDCORE / 2026 SPRING</div><h1>${p.name}</h1><div class="price">${won(p.price)}</div><p class="description">${p.desc}<br>일상 속에서 자연스럽게 개성을 드러내도록 설계했습니다.</p><div class="options"><div class="option-row"><span id="size-label">SIZE</span><div class="option-buttons" role="group" aria-labelledby="size-label">${["S","M","L","XL"].map(size=>`<button type="button" class="size ${size===window.__redcoreSelectedSize?"selected":""}" aria-pressed="${size===window.__redcoreSelectedSize?"true":"false"}" onclick="selectProductSize(this,'${size}')">${size}</button>`).join("")}</div></div><div class="option-row"><span>STOCK</span><span>AVAILABLE</span></div></div><div class="detail-actions"><button type="button" class="btn outline wide" onclick="toggleWish('${p.id}')">${liked?"♥ WISHLIST":"♡ WISHLIST"}</button><button type="button" class="btn wide" onclick="addToCart('${p.id}')">ADD TO CART</button></div><button type="button" class="btn wide" style="margin-top:8px" onclick="buyNow('${p.id}')">BUY NOW</button></div></div>`;
+ const stock=stockFor(p.id);
+ const soldOut = stock===0;
+ const stockLabel = soldOut ? "SOLD OUT" : (stock!=null ? `${stock}개 남음` : "AVAILABLE");
+ el.innerHTML=`<div class="detail"><div class="detail-media"><div class="detail-image"><img id="product-main-image" src="${p.image}" alt="${p.name} 제품 이미지"></div></div><div class="detail-info"><div class="eyebrow">REDCORE / 2026 SPRING</div><h1>${p.name}</h1><div class="price">${won(p.price)}</div><p class="description">${p.desc||p.description||""}<br>일상 속에서 자연스럽게 개성을 드러내도록 설계했습니다.</p><div class="options"><div class="option-row"><span id="size-label">SIZE</span><div class="option-buttons" role="group" aria-labelledby="size-label">${["S","M","L","XL"].map(size=>`<button type="button" class="size ${size===window.__redcoreSelectedSize?"selected":""}" aria-pressed="${size===window.__redcoreSelectedSize?"true":"false"}" onclick="selectProductSize(this,'${size}')">${size}</button>`).join("")}</div></div><div class="option-row"><span>STOCK</span><span>${stockLabel}</span></div></div><div class="detail-actions"><button type="button" class="btn outline wide" onclick="toggleWish('${p.id}')">${liked?"♥ WISHLIST":"♡ WISHLIST"}</button><button type="button" class="btn wide" ${soldOut?"disabled":""} onclick="addToCart('${p.id}')">${soldOut?"SOLD OUT":"ADD TO CART"}</button></div><button type="button" class="btn wide" style="margin-top:8px" ${soldOut?"disabled":""} onclick="buyNow('${p.id}')">BUY NOW</button></div></div>`;
 }
 function selectProductSize(button,size){document.querySelectorAll(".size").forEach(x=>{x.classList.remove("selected");x.setAttribute("aria-pressed","false");});button.classList.add("selected");button.setAttribute("aria-pressed","true");window.__redcoreSelectedSize=size;}
 
@@ -293,7 +391,7 @@ function bindForms(){
   if(!customer.name||!customer.address)return toast("주문자 정보를 확인해주세요.");
   if(!/^01[0-9]-?\d{3,4}-?\d{4}$/.test(customer.phone.replace(/\s/g,"")))return toast("휴대폰 번호를 확인해주세요.");
 
-  const items=cart.map(i=>{const p=findProduct(i.id);const officialCategory={tee:"의류",hoodie:"의류",pants:"의류",cap:"액세서리"};return {productId:i.id,name:p?p.name:i.id,size:i.size||"M",quantity:Number(i.qty),price:Number(p?p.price:0),sellerId:OFFICIAL_SELLER_ID,category:officialCategory[i.id]||"기타"}});
+  const items=cart.map(i=>{const p=findProduct(i.id);const officialCategory={tee:"의류",hoodie:"의류",pants:"의류",cap:"액세서리"};return {productId:i.id,name:p?p.name:i.id,size:i.size||"M",quantity:Number(i.qty),price:Number(p?p.price:0),sellerId:OFFICIAL_SELLER_ID,category:(p&&p.category)||officialCategory[i.id]||"기타"}});
   const btn=order.querySelector("button[type=submit], button:not([type])");
   if(btn){btn.disabled=true;btn.textContent="PROCESSING...";}
 
@@ -316,6 +414,7 @@ function bindForms(){
       createdAt:new Date().toISOString()
     };
     orders.unshift(newOrder);
+    items.forEach(i=>decrementStock(i.productId, i.quantity));
     cart=[];
     save();
     location.href="complete.html?no="+encodeURIComponent(newOrder.id);
