@@ -7,10 +7,10 @@
    ========================================================= */
 
 const PRODUCTS = [
- {id:"tee",name:"REDCORE T-SHIRT",price:49000,image:"images/tee.svg",desc:"REDCORE의 시그니처 그래픽을 담은 베이직 티셔츠."},
- {id:"hoodie",name:"REDCORE HOODIE",price:89000,image:"images/hoodie.svg",desc:"도시적인 실루엣과 편안한 착용감의 헤비 후디."},
- {id:"pants",name:"REDCORE PANTS",price:69000,image:"images/pants.svg",desc:"데일리 스타일링에 맞춘 스트레이트 팬츠."},
- {id:"cap",name:"REDCORE CAP",price:39000,image:"images/cap.svg",desc:"REDCORE 로고 포인트 캡."}
+ {id:"tee",name:"REDCORE T-SHIRT",price:49000,image:"images/tee.svg",desc:"REDCORE의 시그니처 그래픽을 담은 베이직 티셔츠.",category:"의류"},
+ {id:"hoodie",name:"REDCORE HOODIE",price:89000,image:"images/hoodie.svg",desc:"도시적인 실루엣과 편안한 착용감의 헤비 후디.",category:"의류"},
+ {id:"pants",name:"REDCORE PANTS",price:69000,image:"images/pants.svg",desc:"데일리 스타일링에 맞춘 스트레이트 팬츠.",category:"의류"},
+ {id:"cap",name:"REDCORE CAP",price:39000,image:"images/cap.svg",desc:"REDCORE 로고 포인트 캡.",category:"액세서리"}
 ];
 
 let cart = safeParse("redcore_cart", []);
@@ -296,8 +296,7 @@ function sellerStats(sellerId){
 
 /* --- 마켓플레이스 상품 통합 조회 (공식 4개 + 승인된 입점 상품) --- */
 function marketplaceProducts(){
-  const officialCategory = {tee:"의류", hoodie:"의류", pants:"의류", cap:"액세서리"};
-  const official = PRODUCTS.map(p=>({...p, sellerId:OFFICIAL_SELLER_ID, sellerName:"REDCORE", category:officialCategory[p.id]||"기타", status:"APPROVED"}));
+  const official = PRODUCTS.map(p=>({...p, sellerId:OFFICIAL_SELLER_ID, sellerName:"REDCORE", status:"APPROVED"}));
   const thirdParty = sellerProducts.filter(p=>p.status==="APPROVED").map(p=>({...p, sellerName:(sellers.find(s=>s.id===p.sellerId)||{}).businessName||"판매자"}));
   return official.concat(thirdParty);
 }
@@ -344,10 +343,52 @@ function productCard(p){
   const liked=wishlist.includes(p.id);
   const stock=stockFor(p.id);
   const soldOut = stock===0;
-  return `<article class="product-card${soldOut?" sold-out":""}"><button class="heart" type="button" aria-label="${p.name} 찜하기" onclick="toggleWish('${p.id}')">${liked?"♥":"♡"}</button><a href="product.html?id=${p.id}"><div class="pic"><img src="${p.image}" alt="${p.name}" loading="lazy">${soldOut?'<span class="sold-out-badge">SOLD OUT</span>':""}</div></a><div class="product-meta"><a href="product.html?id=${p.id}"><h3>${p.name}</h3></a><p>${won(p.price)}</p></div></article>`;
+  return `<article class="product-card${soldOut?" sold-out":""}"><button class="heart" type="button" aria-label="${p.name} 찜하기" onclick="toggleWish('${p.id}')">${liked?"♥":"♡"}</button><a href="product.html?id=${p.id}"><div class="pic"><img src="${p.image}" alt="${p.name}" loading="lazy">${soldOut?'<span class="sold-out-badge">SOLD OUT</span>':""}</div></a><div class="product-meta"><a href="product.html?id=${p.id}"><h3>${p.name}</h3></a><p>${won(p.price)}</p></div>${soldOut?"":`<button class="quick-add" type="button" onclick="addToCart('${p.id}');event.stopPropagation();">+ ADD TO CART</button>`}</article>`;
 }
 function renderHome(){const el=document.querySelector("#home-products");if(el)el.innerHTML=catalogProducts().slice(0,4).map(productCard).join("");}
-function renderShop(){const el=document.querySelector("#shop-products");if(el)el.innerHTML=catalogProducts().map(productCard).join("");}
+
+let shopFilters = { query:"", category:"ALL", sort:"default" };
+function shopCategoryList(){
+  const cats = Array.from(new Set(catalogProducts().map(p=>p.category).filter(Boolean)));
+  return cats;
+}
+function applyShopFilters(list){
+  let out = list;
+  if(shopFilters.category && shopFilters.category!=="ALL") out = out.filter(p=>p.category===shopFilters.category);
+  if(shopFilters.query){
+    const q = shopFilters.query.trim().toLowerCase();
+    if(q) out = out.filter(p=>(p.name||"").toLowerCase().includes(q) || (p.description||p.desc||"").toLowerCase().includes(q));
+  }
+  const soldOutRank = p => stockFor(p.id)===0 ? 1 : 0;
+  const sorters = {
+    default: (a,b)=> soldOutRank(a)-soldOutRank(b),
+    priceLow: (a,b)=> soldOutRank(a)-soldOutRank(b) || a.price-b.price,
+    priceHigh: (a,b)=> soldOutRank(a)-soldOutRank(b) || b.price-a.price,
+    newest: (a,b)=> soldOutRank(a)-soldOutRank(b) || new Date(b.createdAt||0)-new Date(a.createdAt||0)
+  };
+  return [...out].sort(sorters[shopFilters.sort] || sorters.default);
+}
+function renderShop(){
+  const el=document.querySelector("#shop-products");
+  if(!el) return;
+  const filtered = applyShopFilters(catalogProducts());
+  el.innerHTML = filtered.length ? filtered.map(productCard).join("") : `<div class="shop-empty-hint">"${escapeAttr(shopFilters.query)}"에 대한 검색 결과가 없습니다. 다른 검색어나 카테고리를 선택해보세요.</div>`;
+  const chipsEl = document.querySelector("#shop-category-chips");
+  if(chipsEl){
+    const cats = ["ALL", ...shopCategoryList()];
+    chipsEl.innerHTML = cats.map(c=>`<button type="button" class="filter${shopFilters.category===c?" active":""}" data-cat="${escapeAttr(c)}">${c==="ALL"?"전체":c}</button>`).join("");
+    chipsEl.querySelectorAll("[data-cat]").forEach(btn=>btn.addEventListener("click",()=>{ shopFilters.category=btn.dataset.cat; renderShop(); }));
+  }
+  const countEl = document.querySelector("#shop-result-count");
+  if(countEl) countEl.textContent = `${filtered.length}개 상품`;
+}
+function escapeAttr(v){ return String(v??"").replace(/"/g,"&quot;"); }
+function initShopToolbar(){
+  const searchInput = document.querySelector("#shop-search-input");
+  const sortSelect = document.querySelector("#shop-sort-select");
+  if(searchInput) searchInput.addEventListener("input", ()=>{ shopFilters.query = searchInput.value; renderShop(); });
+  if(sortSelect) sortSelect.addEventListener("change", ()=>{ shopFilters.sort = sortSelect.value; renderShop(); });
+}
 
 function renderProduct(){
  const el=document.querySelector("#product-root");if(!el)return;
@@ -356,16 +397,27 @@ function renderProduct(){
  const soldOut = stock===0;
  const stockLabel = soldOut ? "SOLD OUT" : (stock!=null ? `${stock}개 남음` : "AVAILABLE");
  el.innerHTML=`<div class="detail"><div class="detail-media"><div class="detail-image"><img id="product-main-image" src="${p.image}" alt="${p.name} 제품 이미지"></div></div><div class="detail-info"><div class="eyebrow">REDCORE / 2026 SPRING</div><h1>${p.name}</h1><div class="price">${won(p.price)}</div><p class="description">${p.desc||p.description||""}<br>일상 속에서 자연스럽게 개성을 드러내도록 설계했습니다.</p><div class="options"><div class="option-row"><span id="size-label">SIZE</span><div class="option-buttons" role="group" aria-labelledby="size-label">${["S","M","L","XL"].map(size=>`<button type="button" class="size ${size===window.__redcoreSelectedSize?"selected":""}" aria-pressed="${size===window.__redcoreSelectedSize?"true":"false"}" onclick="selectProductSize(this,'${size}')">${size}</button>`).join("")}</div></div><div class="option-row"><span>STOCK</span><span>${stockLabel}</span></div></div><div class="detail-actions"><button type="button" class="btn outline wide" onclick="toggleWish('${p.id}')">${liked?"♥ WISHLIST":"♡ WISHLIST"}</button><button type="button" class="btn wide" ${soldOut?"disabled":""} onclick="addToCart('${p.id}')">${soldOut?"SOLD OUT":"ADD TO CART"}</button></div><button type="button" class="btn wide" style="margin-top:8px" ${soldOut?"disabled":""} onclick="buyNow('${p.id}')">BUY NOW</button></div></div>`;
+ renderBreadcrumb("breadcrumb", [{label:"HOME",href:"index.html"},{label:"SHOP",href:"shop.html"},{label:p.name}]);
 }
 function selectProductSize(button,size){document.querySelectorAll(".size").forEach(x=>{x.classList.remove("selected");x.setAttribute("aria-pressed","false");});button.classList.add("selected");button.setAttribute("aria-pressed","true");window.__redcoreSelectedSize=size;}
 
 function renderCart(){
  const el=document.querySelector("#cart-root");if(!el)return;
- if(!cart.length){el.innerHTML=`<div class="empty"><p>장바구니가 비어 있습니다.</p><a class="btn" href="shop.html" style="margin-top:20px">SHOP NOW</a></div>`;return;}
+ if(!cart.length){el.innerHTML=`<div class="empty"><span class="empty-icon">🛒</span><p>장바구니가 비어 있습니다.</p><a class="btn" href="shop.html" style="margin-top:20px">SHOP NOW</a></div>`;return;}
  el.innerHTML=`${cart.map(i=>{const p=findProduct(i.id);if(!p)return "";return `<div class="cart-row"><img src="${p.image}" alt="${p.name}"><div><b>${p.name}</b><div class="muted" style="font-size:10px;margin-top:4px">SIZE ${i.size||"M"} · ${won(p.price)}</div></div><div class="qty"><button type="button" aria-label="수량 감소" onclick="changeQty('${p.id}','${i.size||"M"}',-1)">−</button><span aria-live="polite">${i.qty}</span><button type="button" aria-label="수량 증가" onclick="changeQty('${p.id}','${i.size||"M"}',1)">+</button></div><strong class="line-total">${won(p.price*i.qty)}</strong><button type="button" class="remove" onclick="removeItem('${p.id}','${i.size||"M"}')">삭제</button></div>`}).join("")}<div class="cart-summary"><div class="summary-line"><span>상품 금액</span><b>${won(cartSubtotal())}</b></div><div class="summary-line"><span>배송비</span><span>${shippingFee()===0?"무료":won(shippingFee())}</span></div><div class="summary-line summary-total"><span>TOTAL</span><b>${won(cartTotal())}</b></div><a href="order.html" class="btn wide" style="margin-top:18px">CHECKOUT</a></div>`;
 }
-function renderWishlist(){const el=document.querySelector("#wishlist-root");if(!el)return;const ps=wishlist.map(findProduct).filter(Boolean);el.innerHTML=ps.length?`<div class="product-grid">${ps.map(productCard).join("")}</div>`:`<div class="empty">찜한 상품이 없습니다.</div>`;}
-function renderOrders(){const el=document.querySelector("#orders-root");if(!el)return;el.innerHTML=orders.length?orders.map(o=>`<div class="notice-row"><span>${o.date}</span><b>${o.id}</b><span>${won(o.total)}</span></div>`).join(""):`<div class="empty">주문 내역이 없습니다.</div>`;}
+function renderWishlist(){const el=document.querySelector("#wishlist-root");if(!el)return;const ps=wishlist.map(findProduct).filter(Boolean);el.innerHTML=ps.length?`<div class="product-grid">${ps.map(productCard).join("")}</div>`:`<div class="empty"><span class="empty-icon">♡</span>찜한 상품이 없습니다.<br><a class="btn" href="shop.html" style="margin-top:16px">SHOP NOW</a></div>`;}
+function renderOrderSummary(){
+  const el=document.querySelector("#order-summary");
+  if(!el) return;
+  if(!cart.length){ el.innerHTML = `<div class="empty" style="padding:40px 16px"><span class="empty-icon">🛒</span>장바구니가 비어 있습니다.<br><a class="btn" href="shop.html" style="margin-top:16px">SHOP NOW</a></div>`; return; }
+  el.innerHTML = `<h3 style="font-size:13px;margin-bottom:16px">주문 상품 (${cart.reduce((s,i)=>s+Number(i.qty||0),0)})</h3>
+    ${cart.map(i=>{const p=findProduct(i.id); if(!p) return ""; return `<div style="display:flex;gap:12px;align-items:center;margin-bottom:14px"><img src="${p.image}" alt="${p.name}" style="width:52px;height:52px;object-fit:cover;border-radius:var(--radius-sm);background:#eee"><div style="flex:1;min-width:0"><div style="font-size:11.5px;font-weight:700">${p.name}</div><div class="muted" style="font-size:10.5px">SIZE ${i.size||"M"} · 수량 ${i.qty}</div></div><div style="font-size:11.5px;font-weight:700">${won(p.price*i.qty)}</div></div>`}).join("")}
+    <div class="summary-line"><span>상품 금액</span><b>${won(cartSubtotal())}</b></div>
+    <div class="summary-line"><span>배송비</span><span>${shippingFee()===0?"무료":won(shippingFee())}</span></div>
+    <div class="summary-line summary-total"><span>TOTAL</span><b>${won(cartTotal())}</b></div>`;
+}
+function renderOrders(){const el=document.querySelector("#orders-root");if(!el)return;el.innerHTML=orders.length?orders.map(o=>`<div class="notice-row"><span>${o.date}</span><b>${o.id}</b><span>${won(o.total)}</span></div>`).join(""):`<div class="empty"><span class="empty-icon">📦</span>주문 내역이 없습니다.<br><a class="btn" href="shop.html" style="margin-top:16px">SHOP NOW</a></div>`;}
 function renderMypage(){const name=document.querySelector("#member-name");if(name)name.textContent=user?.name||"GUEST";const ordersEl=document.querySelector("#order-count");if(ordersEl)ordersEl.textContent=orders.length;const guestPrompt=document.querySelector("#guest-login-prompt");if(guestPrompt)guestPrompt.style.display=user?"none":"";}
 
 /* Local order-number generator: RC-YYYYMMDD-XXXX (no backend needed) */
@@ -391,7 +443,7 @@ function bindForms(){
   if(!customer.name||!customer.address)return toast("주문자 정보를 확인해주세요.");
   if(!/^01[0-9]-?\d{3,4}-?\d{4}$/.test(customer.phone.replace(/\s/g,"")))return toast("휴대폰 번호를 확인해주세요.");
 
-  const items=cart.map(i=>{const p=findProduct(i.id);const officialCategory={tee:"의류",hoodie:"의류",pants:"의류",cap:"액세서리"};return {productId:i.id,name:p?p.name:i.id,size:i.size||"M",quantity:Number(i.qty),price:Number(p?p.price:0),sellerId:OFFICIAL_SELLER_ID,category:(p&&p.category)||officialCategory[i.id]||"기타"}});
+  const items=cart.map(i=>{const p=findProduct(i.id);return {productId:i.id,name:p?p.name:i.id,size:i.size||"M",quantity:Number(i.qty),price:Number(p?p.price:0),sellerId:(p&&p.sellerId)||OFFICIAL_SELLER_ID,category:(p&&p.category)||"기타"}});
   const btn=order.querySelector("button[type=submit], button:not([type])");
   if(btn){btn.disabled=true;btn.textContent="PROCESSING...";}
 
@@ -454,11 +506,48 @@ function initCookieNotice(){
 }
 
 document.addEventListener("DOMContentLoaded",()=>{
-  updateCount();renderHome();renderShop();renderProduct();renderCart();renderWishlist();renderOrders();renderMypage();bindForms();
+  updateCount();renderHome();renderShop();renderProduct();renderCart();renderWishlist();renderOrders();renderMypage();renderOrderSummary();bindForms();initShopToolbar();
+
+  /* Mobile nav drawer: open/close via button, backdrop click, or Escape */
   const menu=document.querySelector(".menu-btn"),header=document.querySelector(".header");
-  if(menu&&header)menu.addEventListener("click",()=>{const open=header.classList.toggle("menu-open");menu.setAttribute("aria-expanded",open?"true":"false");});
+  function closeMenu(){ if(!header) return; header.classList.remove("menu-open"); if(menu) menu.setAttribute("aria-expanded","false"); document.querySelector(".nav-backdrop")?.classList.remove("show"); }
+  function openMenu(){ if(!header) return; header.classList.add("menu-open"); if(menu) menu.setAttribute("aria-expanded","true"); document.querySelector(".nav-backdrop")?.classList.add("show"); }
+  if(menu&&header){
+    if(!document.querySelector(".nav-backdrop")){
+      const backdrop=document.createElement("div"); backdrop.className="nav-backdrop";
+      backdrop.addEventListener("click",closeMenu);
+      document.body.appendChild(backdrop);
+    }
+    menu.addEventListener("click",()=>{ header.classList.contains("menu-open") ? closeMenu() : openMenu(); });
+    document.addEventListener("keydown",e=>{ if(e.key==="Escape") closeMenu(); });
+    document.querySelectorAll(".nav a").forEach(a=>a.addEventListener("click",closeMenu));
+  }
+
+  /* Active nav link + header scroll shadow */
+  const current = location.pathname.split("/").pop() || "index.html";
+  document.querySelectorAll(".nav a").forEach(a=>{
+    const href=(a.getAttribute("href")||"").split("?")[0];
+    if(href===current || (current==="" && href==="index.html")) a.classList.add("active");
+  });
+  if(header){
+    const onScroll=()=>header.classList.toggle("scrolled", window.scrollY>8);
+    onScroll();
+    window.addEventListener("scroll", onScroll, {passive:true});
+  }
+
   initCookieNotice();
 });
+
+/* Simple breadcrumb renderer: items = [{label, href?}], last item has no href (current page) */
+function renderBreadcrumb(containerId, items){
+  const el = document.querySelector("#"+containerId);
+  if(!el) return;
+  el.innerHTML = items.map((it,i)=>{
+    const isLast = i===items.length-1;
+    const seg = isLast ? `<span class="current">${it.label}</span>` : `<a href="${it.href}">${it.label}</a>`;
+    return i===0 ? seg : `<span class="sep">/</span>${seg}`;
+  }).join("");
+}
 
 /* =========================================================
    Page transitions (single implementation, used on every page)
